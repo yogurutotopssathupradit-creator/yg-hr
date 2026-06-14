@@ -382,9 +382,9 @@ function startClock() {
 
 async function loadEmployees() {
   try {
-    const res = await fetch(`${SHEET_URL}?action=getEmployees`);
-    const data = await res.json();
-    employees = data.names || [];
+   const res = await fetch(`${SHEET_URL}?action=getStaff`);
+const data = await res.json();
+employees = data.data.map(emp => emp.name) || [];
     // โหลด fix config ถ้า sheet ส่งมา
     if (data.scheduleConfig) scheduleConfig = data.scheduleConfig;
   } catch(e) {
@@ -610,45 +610,44 @@ function calcHours(s,e) {
 }
 
 // SCHEDULE
-function renderSchedule() {
-  const POSITIONS=['แคชเชียร์','ปั่น','Topping'];
-  const DAY_OFF={'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัส'};
-  const list=document.getElementById('scheduleList');
-  if (!employees.length) { list.innerHTML='<div class="empty">ไม่พบข้อมูล</div>'; return; }
-  const weeks=Math.floor((Date.now()-new Date('2024-01-01'))/(7*24*3600*1000));
-  const rotation=Math.floor(weeks/2)%3;
-  const today=new Date().toLocaleDateString('th-TH',{weekday:'long'}).replace('วัน','');
+async function renderSchedule() {
+const list = document.getElementById('scheduleList');
 
-  list.innerHTML = employees.map((name,idx) => {
-    const dayOff = DAY_OFF[name] || '';
-    const isOff = today.includes(dayOff);
-    const cfg = scheduleConfig[name] || {};
+try {
+const res = await fetch(`${SHEET_URL}?action=getSchedule`);
+const result = await res.json();
 
-    // กะ: ถ้า fix ใช้ fix, ไม่งั้นหมุน
-    const autoShift = ((Math.floor(weeks/2)+idx)%2)+1;
-    const fixShift = cfg.fixShift; // 'กะ 1' หรือ 'กะ 2' หรือ ''
-    const shift = fixShift ? parseInt(fixShift.replace('กะ ','')) : autoShift;
-    const isFixShift = !!fixShift;
-    const time = shift===1?'10:30–19:30':'11:45–20:45';
+const shifts = result.data.shifts;
+const positions = result.data.positions;
 
-    // ตำแหน่ง: ถ้า fix ใช้ fix, ไม่งั้นหมุน
-    const autoPos = POSITIONS[(idx+rotation)%3];
-    const fixPos = cfg.fixPos; // 'แคชเชียร์'/'ปั่น'/'Topping' หรือ ''
-    const pos = fixPos || autoPos;
-    const isFixPos = !!fixPos;
+const dayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
+const todayIndex = new Date().getDay();
 
-    if (isOff) return `
-      <div class="schedule-card dayoff">
-        <div class="schedule-name">${name}</div>
-        <div class="schedule-detail">🏖️ วันหยุดประจำ (${dayOff})</div>
-      </div>`;
-    return `
-      <div class="schedule-card ${shift===1?'shift1':'shift2'}">
-        <div class="schedule-name">${name}</div>
-        <div class="schedule-detail">⏰ กะ ${shift}: ${time} ${isFixShift?'<span style="font-size:11px;color:#E76F51">📌Fix</span>':'<span style="font-size:11px;opacity:0.6">🔄หมุน</span>'}</div>
-        <span class="schedule-badge">🏷️ ${pos} ${isFixPos?'<span style="font-size:10px;color:#E76F51">📌</span>':'<span style="font-size:10px;opacity:0.6">🔄</span>'}</span>
-      </div>`;
-  }).join('');
+list.innerHTML = shifts.map(staff => {
+const pos = positions.find(p => p.name === staff.name);
+
+const shiftToday = staff[dayKeys[todayIndex]];
+const posToday = pos ? pos[dayKeys[todayIndex]] : '-';
+
+if (shiftToday === 'หยุด') {
+return `
+<div class="schedule-card dayoff">
+<div class="schedule-name">${staff.name}</div>
+<div class="schedule-detail">🏖️ หยุด</div>
+</div>`;
+}
+
+return `
+<div class="schedule-card ${shiftToday === 'กะ1' ? 'shift1' : 'shift2'}">
+<div class="schedule-name">${staff.name}</div>
+<div class="schedule-detail">${shiftToday}</div>
+<span class="schedule-badge">${posToday}</span>
+</div>`;
+}).join('');
+
+} catch (err) {
+list.innerHTML = '<div class="empty">โหลดตารางไม่ได้</div>';
+}
 }
 
 // CALENDAR
