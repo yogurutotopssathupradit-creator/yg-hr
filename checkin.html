@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="YG Staff">
+<title>YG Staff</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --green:#2D6A4F; --green2:#40916C; --green-pale:#D8F3DC;
+  --amber:#E76F51; --amber-pale:#FDE8D8;
+  --blue:#1565C0; --blue-pale:#E3F2FD;
+  --purple:#6A1B9A; --purple-pale:#F3E5F5;
+  --dark:#1B2028; --mid:#4A5568; --light:#F7F8FA; --white:#fff;
+  --radius:16px; --shadow:0 4px 24px rgba(0,0,0,0.10);
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif; background:var(--light); color:var(--dark); min-height:100vh; }
+
+/* HEADER */
+.header { background:var(--green); color:white; padding:16px 16px 20px; }
+.header-top { display:flex; align-items:center; gap:10px; }
+.logo { width:38px;height:38px; background:rgba(255,255,255,0.2); border-radius:12px; display:flex;align-items:center;justify-content:center; font-size:18px; }
+.brand { font-size:17px; font-weight:700; }
+.sub { font-size:12px; opacity:0.75; }
+.clock { margin-left:auto; background:rgba(255,255,255,0.15); border-radius:20px; padding:5px 12px; font-size:15px; font-weight:600; letter-spacing:1px; }
+
+/* NAV */
+.nav { display:flex; background:white; border-bottom:1px solid #E2E8F0; overflow-x:auto; }
+.nav::-webkit-scrollbar { display:none; }
+.nav-btn { flex:none; padding:12px 16px; font-size:13px; font-weight:600; color:var(--mid); border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; font-family:inherit; }
+.nav-btn.active { color:var(--green); border-bottom-color:var(--green); }
+
+/* PAGES */
+.page { display:none; padding:16px; }
+.page.active { display:block; }
+
+/* CARD */
+.card { background:white; border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); margin-bottom:14px; }
+.card-label { font-size:11px; font-weight:700; letter-spacing:1.5px; color:var(--mid); text-transform:uppercase; margin-bottom:12px; }
+
+/* NAME SELECT */
+.name-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.name-btn { border:2px solid #E2E8F0; border-radius:12px; padding:14px 10px; background:white; cursor:pointer; text-align:center; transition:all 0.18s; }
+.name-btn .av { width:34px;height:34px; border-radius:50%; background:var(--green-pale); color:var(--green); font-weight:700; font-size:14px; display:flex;align-items:center;justify-content:center; margin:0 auto 8px; }
+.name-btn .nm { font-size:13px; font-weight:600; }
+.name-btn .rl { font-size:11px; color:var(--mid); margin-top:2px; }
+.name-btn.selected { border-color:var(--green); background:var(--green-pale); }
+.name-btn.selected .av { background:var(--green); color:white; }
+
+/* STATUS */
+.status-row { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:10px; background:var(--light); margin-bottom:12px; }
+.dot { width:10px;height:10px; border-radius:50%; background:#CBD5E0; flex-shrink:0; }
+.dot.in { background:var(--green2); }
+.status-text { font-size:14px; font-weight:600; }
+.status-time { font-size:11px; color:var(--mid); }
+
+/* BUTTONS */
+.btn-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.btn { border:none; border-radius:12px; padding:16px 10px; font-size:15px; font-weight:700; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-family:inherit; transition:all 0.18s; }
+.btn:active { transform:scale(0.96); }
+.btn:disabled { background:#A0AEC0; cursor:not-allowed; }
+.btn-icon { font-size:22px; }
+.btn-in { background:var(--green); color:white; }
+.btn-out { background:var(--amber); color:white; }
+
+/* GPS */
+.gps-bar { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mid); padding:10px 12px; border-radius:10px; background:var(--light); margin-top:10px; }
+.gps-bar.ok { background:var(--green-pale); color:var(--green); }
+.gps-bar.err { background:var(--amber-pale); color:var(--amber); }
+
+/* FORM */
+.form-group { margin-bottom:12px; }
+.form-label { font-size:12px; font-weight:600; color:var(--mid); margin-bottom:6px; display:block; }
+.form-input, .form-select { width:100%; border:1.5px solid #E2E8F0; border-radius:10px; padding:11px 14px; font-size:14px; font-family:inherit; color:var(--dark); outline:none; background:white; }
+.form-input:focus, .form-select:focus { border-color:var(--green); }
+.btn-submit { width:100%; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:4px; color:white; }
+.btn-submit.green { background:var(--green); }
+.btn-submit.amber { background:var(--amber); }
+.btn-submit.blue { background:var(--blue); }
+
+/* LOG */
+.log-item { display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px; background:var(--light); margin-bottom:8px; }
+.log-type { font-size:10px; font-weight:700; letter-spacing:1px; padding:3px 8px; border-radius:20px; min-width:60px; text-align:center; }
+.log-type.in { background:var(--green-pale); color:var(--green); }
+.log-type.out { background:var(--amber-pale); color:var(--amber); }
+.log-type.leave { background:var(--blue-pale); color:var(--blue); }
+.log-type.ot { background:var(--purple-pale); color:var(--purple); }
+.log-name { font-size:13px; font-weight:600; flex:1; }
+.log-time { font-size:11px; color:var(--mid); }
+.empty { text-align:center; color:var(--mid); font-size:13px; padding:16px 0; }
+
+/* SCHEDULE */
+.schedule-card { border-radius:12px; padding:16px; margin-bottom:10px; }
+.schedule-card.shift1 { background:var(--blue-pale); }
+.schedule-card.shift2 { background:var(--green-pale); }
+.schedule-name { font-size:15px; font-weight:700; margin-bottom:4px; }
+.schedule-detail { font-size:13px; color:var(--mid); }
+.schedule-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; margin-top:8px; }
+.badge-pos { background:white; color:var(--dark); }
+
+/* TOAST */
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--dark); color:white; padding:11px 20px; border-radius:28px; font-size:14px; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,0.2); transition:transform 0.3s cubic-bezier(.175,.885,.32,1.275); z-index:999; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.ok { background:var(--green); }
+.toast.err { background:var(--amber); }
+
+/* LOADING */
+.loading { text-align:center; color:var(--mid); font-size:13px; padding:20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🧋</div>
+    <div>
+      <div class="brand">YG Tops Sathu49</div>
+      <div class="sub">ระบบ HR พนักงาน</div>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="goPage('checkin')">📍 เช็คอิน</button>
+  <button class="nav-btn" onclick="goPage('leave')">🏖️ ลางาน</button>
+  <button class="nav-btn" onclick="goPage('ot')">⏰ โอที</button>
+  <button class="nav-btn" onclick="goPage('schedule')">📅 ตาราง</button>
+  <button class="nav-btn" onclick="goPage('log')">📋 ประวัติ</button>
+</nav>
+
+<!-- CHECK IN/OUT -->
+<div class="page active" id="page-checkin">
+  <div class="card">
+    <div class="card-label">เลือกชื่อของคุณ</div>
+    <div class="name-grid" id="nameGrid"><div class="loading">กำลังโหลด...</div></div>
+  </div>
+  <div class="card">
+    <div class="card-label">สถานะวันนี้</div>
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <div>
+        <div class="status-text" id="statusText">เลือกชื่อก่อน</div>
+        <div class="status-time" id="statusTime"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-in" id="btnIn" disabled onclick="doCheckin('เช็คอิน')">
+        <span class="btn-icon">🟢</span>เช็คอิน
+      </button>
+      <button class="btn btn-out" id="btnOut" disabled onclick="doCheckin('เช็คเอาท์')">
+        <span class="btn-icon">🔴</span>เช็คเอาท์
+      </button>
+    </div>
+    <div class="gps-bar" id="gpsBar">📍 กำลังตรวจสอบ GPS...</div>
+  </div>
+</div>
+
+<!-- LEAVE -->
+<div class="page" id="page-leave">
+  <div class="card">
+    <div class="card-label">แจ้งลางาน</div>
+    <div class="form-group">
+      <label class="form-label">ชื่อพนักงาน</label>
+      <select class="form-select" id="leaveName"><option value="">-- เลือกชื่อ --</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ประเภทการลา</label>
+      <select class="form-select" id="leaveType">
+        <option value="ลาป่วย">ลาป่วย</option>
+        <option value="ลากิจ">ลากิจ</option>
+        <option value="ลาพักร้อน">ลาพักร้อน</option>
+        <option value="ลาไม่รับเงิน">ลาไม่รับเงิน</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">วันที่ลา</label>
+      <input class="form-input" type="date" id="leaveDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เหตุผล</label>
+      <input class="form-input" type="text" id="leaveReason" placeholder="ระบุเหตุผล">
+    </div>
+    <button class="btn-submit blue" onclick="submitLeave()">📤 ส่งคำขอลา</button>
+  </div>
+</div>
+
+<!-- OT -->
+<div class="page" id="page-ot">
+  <div class="card">
+    <div class="card-label">แจ้งโอที</div>
+    <div class="form-group">
+      <label class="form-label">ชื่อพนักงาน</label>
+      <select class="form-select" id="otName"><option value="">-- เลือกชื่อ --</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">วันที่ทำโอที</label>
+      <input class="form-input" type="date" id="otDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เวลาเริ่ม</label>
+      <input class="form-input" type="time" id="otStart">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เวลาสิ้นสุด</label>
+      <input class="form-input" type="time" id="otEnd">
+    </div>
+    <button class="btn-submit amber" onclick="submitOT()">📤 ส่งคำขอโอที</button>
+  </div>
+</div>
+
+<!-- SCHEDULE -->
+<div class="page" id="page-schedule">
+  <div class="card">
+    <div class="card-label">ตารางกะสัปดาห์นี้</div>
+    <div id="scheduleList"><div class="loading">กำลังโหลด...</div></div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="page" id="page-log">
+  <div class="card">
+    <div class="card-label">ประวัติวันนี้</div>
+    <div id="logList"><div class="empty">ยังไม่มีบันทึก</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbzJI_o31Lq1Pjk23tpQm4Uqq3FPKZ6JflFHpsJRPEhMMcLCJTlVtJf-nq8w64rvLEHx/exec";
+const SHOP_LAT = 13.687111, SHOP_LNG = 100.532806, RADIUS_M = 150;
+
+let selectedEmp = null, gpsOk = false, userLat = null, userLng = null;
+let employees = [];
+let todayLog = JSON.parse(localStorage.getItem('todayLog_v2') || '[]');
+
+// ─── INIT ─────────────────────────────────────────────────
+async function init() {
+  clearOldLog();
+  startClock();
+  watchGPS();
+  await loadEmployees();
+  setDefaultDates();
+}
+
+function clearOldLog() {
+  const today = new Date().toLocaleDateString('th-TH');
+  if (localStorage.getItem('logDate_v2') !== today) {
+    todayLog = [];
+    localStorage.setItem('todayLog_v2', '[]');
+    localStorage.setItem('logDate_v2', today);
+  }
+}
+
+function setDefaultDates() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('leaveDate').value = today;
+  document.getElementById('otDate').value = today;
+}
+
+function startClock() {
+  const tick = () => {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+  };
+  tick(); setInterval(tick, 1000);
+}
+
+// ─── LOAD EMPLOYEES ───────────────────────────────────────
+async function loadEmployees() {
+  try {
+    const res = await fetch(`${SHEET_URL}?action=getEmployees`);
+    const data = await res.json();
+    employees = data.names || [];
+  } catch(e) {
+    employees = ['แอม','แบม','มายด์'];
+  }
+  renderNames();
+  populateSelects();
+  renderSchedule();
+}
+
+function renderNames() {
+  const grid = document.getElementById('nameGrid');
+  if (!employees.length) { grid.innerHTML = '<div class="empty">ไม่พบข้อมูลพนักงาน</div>'; return; }
+  grid.innerHTML = employees.map(name => `
+    <button class="name-btn" onclick="selectEmp('${name}')">
+      <div class="av">${name[0]}</div>
+      <div class="nm">${name}</div>
+    </button>
+  `).join('');
+}
+
+function populateSelects() {
+  const opts = employees.map(n => `<option value="${n}">${n}</option>`).join('');
+  document.getElementById('leaveName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
+  document.getElementById('otName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
+}
+
+// ─── GPS ──────────────────────────────────────────────────
+function watchGPS() {
+  if (!navigator.geolocation) { setGps(false, 'ไม่รองรับ GPS'); return; }
+  navigator.geolocation.watchPosition(
+    pos => {
+      userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+      const d = getDist(userLat, userLng, SHOP_LAT, SHOP_LNG);
+      setGps(d <= RADIUS_M, d <= RADIUS_M ? `อยู่ในพื้นที่ร้าน (${Math.round(d)}ม.)` : `อยู่นอกพื้นที่ (${Math.round(d)}ม.)`);
+    },
+    () => setGps(false, 'ไม่สามารถรับ GPS ได้'),
+    {enableHighAccuracy:true, maximumAge:10000}
+  );
+}
+
+function setGps(ok, msg) {
+  gpsOk = ok;
+  const bar = document.getElementById('gpsBar');
+  bar.className = 'gps-bar ' + (ok ? 'ok' : 'err');
+  bar.textContent = (ok ? '✅ ' : '❌ ') + msg;
+  updateBtns();
+}
+
+function getDist(la1,lo1,la2,lo2) {
+  const R=6371000, dLa=(la2-la1)*Math.PI/180, dLo=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ─── SELECT EMP ───────────────────────────────────────────
+function selectEmp(name) {
+  selectedEmp = name;
+  document.querySelectorAll('.name-btn').forEach(b => b.classList.toggle('selected', b.querySelector('.nm').textContent === name));
+  updateStatus(); updateBtns();
+}
+
+function updateStatus() {
+  if (!selectedEmp) return;
+  const logs = todayLog.filter(l => l.name === selectedEmp);
+  const last = logs[logs.length-1];
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const time = document.getElementById('statusTime');
+  if (!last) { dot.className='dot'; text.textContent='ยังไม่ได้เช็คอิน'; time.textContent=''; }
+  else if (last.type==='เช็คอิน') { dot.className='dot in'; text.textContent=`กำลังทำงาน — ${selectedEmp}`; time.textContent=`เช็คอินเมื่อ ${last.time}`; }
+  else { dot.className='dot'; text.textContent=`เสร็จงานแล้ว — ${selectedEmp}`; time.textContent=`เช็คเอาท์เมื่อ ${last.time}`; }
+}
+
+function updateBtns() {
+  const btnIn = document.getElementById('btnIn'), btnOut = document.getElementById('btnOut');
+  if (!selectedEmp || !gpsOk) { btnIn.disabled=true; btnOut.disabled=true; return; }
+  const logs = todayLog.filter(l => l.name === selectedEmp);
+  const last = logs[logs.length-1];
+  const checkedIn = last && last.type==='เช็คอิน';
+  btnIn.disabled = checkedIn; btnOut.disabled = !checkedIn;
+}
+
+// ─── CHECKIN ──────────────────────────────────────────────
+async function doCheckin(type) {
+  if (!selectedEmp) return toast('เลือกชื่อก่อนนะครับ', 'err');
+  if (!gpsOk) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน', 'err');
+  const now = new Date();
+  const time = now.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+  const date = now.toLocaleDateString('th-TH');
+  const entry = {name:selectedEmp, type, time, date};
+  todayLog.push(entry);
+  localStorage.setItem('todayLog_v2', JSON.stringify(todayLog));
+  updateStatus(); updateBtns(); renderLog();
+  toast(`${type}สำเร็จ — ${time}`, 'ok');
+  await sendToSheet({action:'checkin', ...entry});
+}
+
+// ─── LEAVE ────────────────────────────────────────────────
+async function submitLeave() {
+  const name = document.getElementById('leaveName').value;
+  const type = document.getElementById('leaveType').value;
+  const date = document.getElementById('leaveDate').value;
+  const reason = document.getElementById('leaveReason').value;
+  if (!name) return toast('เลือกชื่อก่อนนะครับ', 'err');
+  if (!date) return toast('ระบุวันที่ด้วยครับ', 'err');
+  await sendToSheet({action:'leave', name, type, date, reason});
+  const entry = {name, type:`ลา:${type}`, time:date, date:new Date().toLocaleDateString('th-TH')};
+  todayLog.push(entry); localStorage.setItem('todayLog_v2', JSON.stringify(todayLog));
+  renderLog();
+  toast(`ส่งคำขอลาแล้ว ✅`, 'ok');
+  document.getElementById('leaveReason').value = '';
+}
+
+// ─── OT ───────────────────────────────────────────────────
+async function submitOT() {
+  const name = document.getElementById('otName').value;
+  const date = document.getElementById('otDate').value;
+  const start = document.getElementById('otStart').value;
+  const end = document.getElementById('otEnd').value;
+  if (!name) return toast('เลือกชื่อก่อนนะครับ', 'err');
+  if (!start || !end) return toast('ระบุเวลาด้วยครับ', 'err');
+  const hrs = calcHours(start, end);
+  await sendToSheet({action:'ot', name, date, start, end, hours:hrs});
+  const entry = {name, type:`โอที`, time:`${start}-${end}`, date:new Date().toLocaleDateString('th-TH')};
+  todayLog.push(entry); localStorage.setItem('todayLog_v2', JSON.stringify(todayLog));
+  renderLog();
+  toast(`บันทึกโอที ${hrs} ชม. แล้ว ✅`, 'ok');
+}
+
+function calcHours(s, e) {
+  const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+  return Math.round(((eh*60+em)-(sh*60+sm))/60*10)/10;
+}
+
+// ─── SCHEDULE ─────────────────────────────────────────────
+function renderSchedule() {
+  const POSITIONS = ['แคชเชียร์รับลูกค้า','ปั่น','จัดเตรียม Topping'];
+  const list = document.getElementById('scheduleList');
+  if (!employees.length) { list.innerHTML = '<div class="empty">ไม่พบข้อมูลพนักงาน</div>'; return; }
+  const weeks = Math.floor((Date.now() - new Date('2024-01-01')) / (7*24*3600*1000));
+  const rotation = Math.floor(weeks/2) % 3;
+  list.innerHTML = employees.map((name, idx) => {
+    const pos = POSITIONS[(idx + rotation) % 3];
+    const shift = ((Math.floor(weeks/2) + idx) % 2) + 1;
+    const time = shift===1 ? '10:30–19:30' : '11:45–20:45';
+    return `
+      <div class="schedule-card ${shift===1?'shift1':'shift2'}">
+        <div class="schedule-name">${name}</div>
+        <div class="schedule-detail">⏰ กะ ${shift}: ${time}</div>
+        <span class="schedule-badge badge-pos">🏷️ ${pos}</span>
+      </div>`;
+  }).join('');
+}
+
+// ─── LOG ──────────────────────────────────────────────────
+function renderLog() {
+  const list = document.getElementById('logList');
+  if (!todayLog.length) { list.innerHTML = '<div class="empty">ยังไม่มีบันทึกวันนี้</div>'; return; }
+  list.innerHTML = [...todayLog].reverse().map(l => {
+    const cls = l.type==='เช็คอิน'?'in':l.type==='เช็คเอาท์'?'out':l.type.startsWith('ลา')?'leave':'ot';
+    return `<div class="log-item">
+      <div class="log-type ${cls}">${l.type}</div>
+      <div class="log-name">${l.name}</div>
+      <div class="log-time">${l.time}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── SHEET ────────────────────────────────────────────────
+async function sendToSheet(data) {
+  try {
+    await fetch(SHEET_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    });
+  } catch(e) {}
+}
+
+// ─── NAV ──────────────────────────────────────────────────
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if (id==='log') renderLog();
+}
+
+// ─── TOAST ────────────────────────────────────────────────
+let tt;
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(tt); tt = setTimeout(() => t.className='toast', 2800);
+}
+
+init();
+</script>
+</body>
+</html>
