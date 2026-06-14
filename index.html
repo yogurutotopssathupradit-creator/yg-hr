@@ -638,27 +638,36 @@ const pos = positions.find(p => p.name === staff.name);
 const shiftToday = staff[todayKey];
 const posToday = pos ? pos[todayKey] : '-';
 
+// ถ้าวันหยุด
 if (shiftToday === 'หยุด') {
 return `
 <div class="schedule-card dayoff">
 <div class="schedule-name">${staff.name}</div>
 <div class="schedule-detail">🏖️ หยุด</div>
-</div>`;
+</div>
+`;
 }
 
+// ถ้าวันทำงาน
+let cardClass = 'dayoff';
+if (shiftToday === 'กะ 1') cardClass = 'shift1';
+if (shiftToday === 'กะ 2') cardClass = 'shift2';
+
 return `
-<div class="schedule-card ${shiftToday === 'กะ 1' ? 'shift1' : shiftToday === 'กะ 2' ? 'shift2' : 'dayoff'}">
+<div class="schedule-card ${cardClass}">
 <div class="schedule-name">${staff.name}</div>
 <div class="schedule-detail">${shiftToday}</div>
 <span class="schedule-badge">${posToday}</span>
-</div>`;
+</div>
+`;
 }).join('');
 
 } catch (err) {
+console.log(err);
+
 list.innerHTML = '<div class="empty">โหลดตารางไม่ได้</div>';
 }
 }
-
 // CALENDAR
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const THAI_YEAR_OFFSET = 543;
