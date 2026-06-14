@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="YG Staff">
+<title>YG Staff</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--g:#2D6A4F;--g2:#40916C;--gp:#D8F3DC;--am:#E76F51;--ap:#FDE8D8;--bl:#1565C0;--bp:#E3F2FD;--rd:#C62828;--rp:#FFEBEE;--pu:#6A1B9A;--pp:#F3E5F5;--dk:#1B2028;--md:#4A5568;--lt:#F7F8FA;--r:16px;--sh:0 4px 24px rgba(0,0,0,.10)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;background:var(--lt);color:var(--dk);min-height:100vh}
+.hd{background:var(--g);color:#fff;padding:16px 16px 20px}
+.ht{display:flex;align-items:center;gap:10px}
+.lg{width:38px;height:38px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.br{font-size:17px;font-weight:700}.sb{font-size:12px;opacity:.75}
+.ck{margin-left:auto;background:rgba(255,255,255,.15);border-radius:20px;padding:5px 12px;font-size:15px;font-weight:600;letter-spacing:1px}
+.nv{display:flex;background:#fff;border-bottom:1px solid #E2E8F0;overflow-x:auto}.nv::-webkit-scrollbar{display:none}
+.nb{flex:none;padding:10px 14px;font-size:12px;font-weight:600;color:var(--md);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px}
+.ni{font-size:18px}.nb.active{color:var(--g);border-bottom-color:var(--g)}
+.pg{display:none;padding:14px}.pg.active{display:block}
+.cd{background:#fff;border-radius:var(--r);padding:16px;box-shadow:var(--sh);margin-bottom:12px}
+.cl{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:12px}
+.ng{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.nb2{border:2px solid #E2E8F0;border-radius:12px;padding:12px 8px;background:#fff;cursor:pointer;text-align:center;transition:all .18s}
+.av{width:32px;height:32px;border-radius:50%;background:var(--gp);color:var(--g);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
+.nm{font-size:13px;font-weight:600}
+.nb2.sel{border-color:var(--g);background:var(--gp)}.nb2.sel .av{background:var(--g);color:#fff}
+.sr{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--lt);margin-bottom:12px}
+.dt{width:10px;height:10px;border-radius:50%;background:#CBD5E0;flex-shrink:0}.dt.in{background:var(--g2)}
+.stx{font-size:14px;font-weight:600}.stm{font-size:11px;color:var(--md)}
+.br2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bn{border:none;border-radius:12px;padding:16px 10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;transition:all .18s}
+.bn:active{transform:scale(.96)}.bn:disabled{background:#A0AEC0;cursor:not-allowed}.bni{font-size:22px}
+.bin{background:var(--g);color:#fff}.bot{background:var(--am);color:#fff}
+.gb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--md);padding:10px 12px;border-radius:10px;background:var(--lt);margin-top:10px}
+.gb.ok{background:var(--gp);color:var(--g)}.gb.err{background:var(--ap);color:var(--am)}
+.fg{margin-bottom:12px}.fl{font-size:12px;font-weight:600;color:var(--md);margin-bottom:6px;display:block}
+.fi,.fs{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;color:var(--dk);outline:none;background:#fff}
+.fi:focus,.fs:focus{border-color:var(--g)}
+.bs{width:100%;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;color:#fff}
+.bg{background:var(--g)}.ba{background:var(--am)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.ct{font-size:17px;font-weight:700}.cn{width:36px;height:36px;border:none;background:var(--gp);border-radius:10px;cursor:pointer;font-size:18px;color:var(--g);display:flex;align-items:center;justify-content:center}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cdh{text-align:center;font-size:11px;font-weight:700;color:var(--md);padding:6px 0}.cdh.sun,.cdh.sat{color:var(--rd)}
+.cday{border-radius:10px;padding:6px 2px;text-align:center;min-height:52px;cursor:pointer}
+.cday .dn{font-size:14px;font-weight:600;margin-bottom:3px}
+.cday.today .dn{background:var(--g);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px}
+.cday.om .dn{color:#CBD5E0}.cday.hol{background:var(--rp)}.cday.lv{background:var(--bp)}
+.cday.sun .dn,.cday.sat .dn{color:var(--rd)}
+.dts{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;min-height:14px}
+.dt2{width:6px;height:6px;border-radius:50%}
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--md)}
+.ld{width:8px;height:8px;border-radius:50%}
+.lgi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--lt);margin-bottom:8px}
+.lt2{font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:20px;min-width:60px;text-align:center}
+.lt2.in{background:var(--gp);color:var(--g)}.lt2.out{background:var(--ap);color:var(--am)}
+.lt2.lv{background:var(--bp);color:var(--bl)}.lt2.ot{background:var(--pp);color:var(--pu)}
+.ln{font-size:13px;font-weight:600;flex:1}.ltm{font-size:11px;color:var(--md)}
+.emp{text-align:center;color:var(--md);font-size:13px;padding:16px 0}
+.sc{border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid transparent}
+.sc.s1{background:var(--bp);border-left-color:var(--bl)}.sc.s2{background:var(--gp);border-left-color:var(--g)}.sc.off{background:var(--ap);border-left-color:var(--am)}
+.sn{font-size:15px;font-weight:700;margin-bottom:4px}.sd{font-size:13px;color:var(--md)}
+.sw{font-size:12px;color:var(--md);margin-bottom:12px;text-align:center}
+.lvi{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--lt);margin-bottom:8px}
+.lii{flex:1}.lit{font-size:13px;font-weight:700}.lid{font-size:11px;color:var(--md);margin-top:2px}
+.lis{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.sw2{background:#FFF8E1;color:#F9A825}.sok{background:var(--gp);color:var(--g)}.sno{background:var(--rp);color:var(--rd)}
+.bcl{border:none;background:var(--rp);color:var(--rd);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.po{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.po.show{opacity:1;pointer-events:all}
+.pp{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s cubic-bezier(.175,.885,.32,1.1)}
+.po.show .pp{transform:translateY(0)}
+.ph{width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 16px}
+.pd{font-size:18px;font-weight:700;margin-bottom:4px}.pdy{font-size:13px;color:var(--md);margin-bottom:14px}
+.ps{margin-bottom:14px}.pst{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:8px}
+.pi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;font-size:14px;font-weight:600}
+.pi.hol{background:var(--rp);color:var(--rd)}.pi.lv{background:var(--bp);color:var(--bl)}
+.pi.wk{background:var(--gp);color:var(--g)}.pi.off{background:var(--ap);color:var(--am)}
+.pc{width:100%;border:none;border-radius:12px;padding:13px;background:var(--lt);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--md);margin-top:4px}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dk);color:#fff;padding:11px 20px;border-radius:28px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.175,.885,.32,1.275);z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}.toast.ok{background:var(--g)}.toast.err{background:var(--am)}
+</style>
+</head>
+<body>
+<div class="hd"><div class="ht"><div class="lg">🧋</div><div><div class="br">YG Tops Sathu49</div><div class="sb">ระบบ HR พนักงาน</div></div><div class="ck" id="ck">--:--</div></div></div>
+<nav class="nv">
+  <button class="nb active" onclick="goPage('checkin',this)"><span class="ni">📍</span>เช็คอิน</button>
+  <button class="nb" onclick="goPage('leave',this)"><span class="ni">🏖️</span>ลางาน</button>
+  <button class="nb" onclick="goPage('ot',this)"><span class="ni">⏰</span>โอที</button>
+  <button class="nb" onclick="goPage('schedule',this)"><span class="ni">📅</span>ตาราง</button>
+  <button class="nb" onclick="goPage('calendar',this)"><span class="ni">🗓️</span>ปฏิทิน</button>
+  <button class="nb" onclick="goPage('log',this)"><span class="ni">📋</span>ประวัติ</button>
+</nav>
+
+<!-- เช็คอิน -->
+<div class="pg active" id="page-checkin">
+  <div class="cd"><div class="cl">เลือกชื่อของคุณ</div><div class="ng" id="nameGrid"></div></div>
+  <div class="cd">
+    <div class="cl">สถานะวันนี้</div>
+    <div class="sr"><div class="dt" id="sDot"></div><div><div class="stx" id="sTxt">เลือกชื่อก่อน</div><div class="stm" id="sTm"></div></div></div>
+    <div class="br2">
+      <button class="bn bin" id="btnIn" disabled onclick="doCI('เช็คอิน')"><span class="bni">🟢</span>เช็คอิน</button>
+      <button class="bn bot" id="btnOut" disabled onclick="doCI('เช็คเอาท์')"><span class="bni">🔴</span>เช็คเอาท์</button>
+    </div>
+    <div class="gb" id="gpsBar">📍 กำลังตรวจสอบ GPS...</div>
+  </div>
+</div>
+
+<!-- ลางาน -->
+<div class="pg" id="page-leave">
+  <div class="cd">
+    <div class="cl">แจ้งลางาน</div>
+    <div class="fg"><label class="fl">ชื่อพนักงาน</label><select class="fs" id="leaveName" onchange="loadML()"><option value="">-- เลือกชื่อ --</option></select></div>
+    <div class="fg"><label class="fl">ประเภทการลา</label><select class="fs" id="leaveType"><option>ลาป่วย</option><option>ลากิจ</option><option>ลาพักร้อน</option><option>ลาไม่รับเงิน</option></select></div>
+    <div class="fg"><label class="fl">วันที่ลา</label><input class="fi" type="date" id="leaveDate"></div>
+    <div class="fg"><label class="fl">เหตุผล (ไม่บังคับ)</label><input class="fi" type="text" id="leaveReason" placeholder="ระบุเหตุผล"></div>
+    <button class="bs bg" onclick="subLeave()">📤 ส่งคำขอลา</button>
+  </div>
+  <div class="cd" id="mlCard" style="display:none"><div class="cl">รายการลาของฉัน</div><div id="mlList"><div class="emp">ไม่มีรายการลา</div></div></div>
+</div>
+
+<!-- โอที -->
+<div class="pg" id="page-ot">
+  <div class="cd">
+    <div class="cl">แจ้งโอที</div>
+    <div class="fg"><label class="fl">ชื่อพนักงาน</label><select class="fs" id="otName" onchange="loadMO()"><option value="">-- เลือกชื่อ --</option></select></div>
+    <div class="fg"><label class="fl">วันที่ทำโอที</label><input class="fi" type="date" id="otDate"></div>
+    <div class="fg"><label class="fl">เวลาเริ่ม</label><input class="fi" type="time" id="otStart"></div>
+    <div class="fg"><label class="fl">เวลาสิ้นสุด</label><input class="fi" type="time" id="otEnd"></div>
+    <button class="bs ba" onclick="subOT()">📤 ส่งคำขอโอที</button>
+  </div>
+  <div class="cd" id="moCard" style="display:none"><div class="cl">รายการโอทีของฉัน</div><div id="moList"><div class="emp">ไม่มีรายการโอที</div></div></div>
+</div>
+
+<div class="pg" id="page-schedule">
+  <div class="cd">
+    <div class="cl">ตารางกะสัปดาห์นี้</div>
+    <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSICbQIHXfFPN_YOUdz8YODAkbGHWmuo-uzPoIRfl_Ev3Jb77OBvvsTuCLMnswY7qWup5-Zf3DCjW6v/pubhtml?gid=81301668&single=true"
+      style="width:100%;height:420px;border:none;border-radius:12px;"></iframe>
+  </div>
+</div>
+
+<!-- ปฏิทิน -->
+<div class="pg" id="page-calendar">
+  <div class="cd">
+    <div class="ch"><button class="cn" onclick="chMon(-1)">‹</button><div class="ct" id="calT"></div><button class="cn" onclick="chMon(1)">›</button></div>
+    <div class="cg" id="calG"></div>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:#E76F51"></div>แอม</div>
+      <div class="li"><div class="ld" style="background:#2D6A4F"></div>แบม</div>
+      <div class="li"><div class="ld" style="background:#1565C0"></div>มายด์</div>
+      <div class="li"><div class="ld" style="background:#C62828"></div>วันหยุดนักขัตฤกษ์</div>
+    </div>
+  </div>
+</div>
+
+<!-- ประวัติ -->
+<div class="pg" id="page-log"><div class="cd"><div class="cl">ประวัติวันนี้</div><div id="logList"><div class="emp">ยังไม่มีบันทึก</div></div></div></div>
+
+<div class="po" id="popO" onclick="closePop(event)">
+  <div class="pp"><div class="ph"></div><div class="pd" id="popD"></div><div class="pdy" id="popDy"></div><div id="popC"></div><button class="pc" onclick="closePop()">ปิด</button></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// ✏️ ADMIN แก้ตรงนี้อาทิตย์ละครั้ง
+// ============================================================
+const WEEK_LABEL = '16/06 - 22/06/2026'; // ← แก้วันที่สัปดาห์
+
+const SCHEDULE = {
+  // ชื่อ: { จันทร์, อังคาร, พุธ, พฤหัส, ศุกร์, เสาร์, อาทิตย์ }
+  // กะ 1 = 10:30-19:30, กะ 2 = 11:45-20:45, หยุด = วันหยุด
+  'แอม':  { จันทร์:'กะ 1', อังคาร:'หยุด',  พุธ:'กะ 1',  พฤหัส:'กะ 1',  ศุกร์:'กะ 1',  เสาร์:'กะ 1',  อาทิตย์:'กะ 1'  },
+  'แบม':  { จันทร์:'กะ 1', อังคาร:'กะ 1',  พุธ:'หยุด',  พฤหัส:'กะ 1',  ศุกร์:'กะ 1',  เสาร์:'กะ 1',  อาทิตย์:'กะ 1'  },
+  'มายด์':{ จันทร์:'กะ 2', อังคาร:'กะ 2',  พุธ:'กะ 2',  พฤหัส:'หยุด',  ศุกร์:'กะ 2',  เสาร์:'กะ 2',  อาทิตย์:'กะ 2'  },
+};
+// ============================================================
+
+const SU = 'https://script.google.com/macros/s/AKfycbzJI_o31Lq1Pjk23tpQm4Uqq3FPKZ6JflFHpsJRPEhMMcLCJTlVtJf-nq8w64rvLEHx/exec';
+const SLAT=13.687111, SLNG=100.532806, SR=150;
+const HOL={"2026-01-01":"วันขึ้นปีใหม่","2026-01-02":"ชดเชยวันขึ้นปีใหม่","2026-02-20":"วันมาฆบูชา","2026-04-06":"วันจักรี","2026-04-13":"วันสงกรานต์","2026-04-14":"วันสงกรานต์","2026-04-15":"วันสงกรานต์","2026-05-01":"วันแรงงาน","2026-05-11":"วันวิสาขบูชา","2026-06-03":"วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี","2026-06-04":"ชดเชย","2026-07-29":"วันเฉลิมพระชนมพรรษา ร.10","2026-08-12":"วันแม่แห่งชาติ","2026-10-13":"วันนวมินทรมหาราช","2026-10-23":"วันปิยมหาราช","2026-12-05":"วันพ่อแห่งชาติ","2026-12-07":"ชดเชยวันพ่อ","2026-12-10":"วันรัฐธรรมนูญ","2026-12-31":"วันสิ้นปี"};
+const SHIFT_TIME = {'กะ 1':'10:30–19:30','กะ 2':'11:45–20:45'};
+const DAY_NAMES = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+const emp = Object.keys(SCHEDULE);
+
+let selEmp=null, gpsOk=false, leaveData={};
+let calY=new Date().getFullYear(), calM=new Date().getMonth();
+let log=JSON.parse(localStorage.getItem('yg_log')||'[]');
+
+function init(){
+  clearLog(); startClock(); watchGPS(); setDates();
+  renderNames(); populateSel();
+  renderCalendar();
+  loadLeaveData();
+}
+
+function clearLog(){const t=new Date().toLocaleDateString('th-TH');if(localStorage.getItem('yg_ld')!==t){log=[];localStorage.setItem('yg_log','[]');localStorage.setItem('yg_ld',t);}}
+function setDates(){const t=new Date().toISOString().split('T')[0];document.getElementById('leaveDate').value=t;document.getElementById('otDate').value=t;}
+function startClock(){const f=()=>{document.getElementById('ck').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});};f();setInterval(f,1000);}
+
+// ── JSONP สำหรับ Sheet ───────────────────────────────
+function api(action,params){
+  return new Promise((ok,err)=>{
+    const cb='_cb'+Date.now(), s=document.createElement('script');
+    const t=setTimeout(()=>{delete window[cb];s.remove();err(new Error('timeout'));},10000);
+    window[cb]=(d)=>{clearTimeout(t);delete window[cb];s.remove();ok(d);};
+    const p=params?'&'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&'):'';
+    s.src=SU+'?action='+action+p+'&callback='+cb;
+    s.onerror=()=>{clearTimeout(t);delete window[cb];err(new Error('error'));};
+    document.head.appendChild(s);
+  });
+}
+async function post(data){
+  try{await fetch(SU,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch(e){}
+}
+
+async function loadLeaveData(){
+  try{const d=await api('getLeaves');leaveData=d.leaves||{};}catch(e){}
+  renderCalendar();
+}
+
+// ── ตารางกะ (hardcode ไม่มี CORS) ───────────────────
+function renderSchedule(){
+  const today = DAY_NAMES[new Date().getDay()];
+  
+  
+}
+
+// ── ชื่อพนักงาน ───────────────────────────────────────
+function renderNames(){
+  document.getElementById('nameGrid').innerHTML=emp.map(n=>'<button class="nb2" onclick="selE(\''+n+'\')"><div class="av">'+n[0]+'</div><div class="nm">'+n+'</div></button>').join('');
+}
+function populateSel(){
+  const o=emp.map(n=>'<option>'+n+'</option>').join('');
+  document.getElementById('leaveName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;
+  document.getElementById('otName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;
+}
+
+// ── GPS ───────────────────────────────────────────────
+function watchGPS(){
+  if(!navigator.geolocation){setGPS(false,'ไม่รองรับ GPS');return;}
+  navigator.geolocation.watchPosition(
+    p=>{const d=getDist(p.coords.latitude,p.coords.longitude,SLAT,SLNG);setGPS(d<=SR,d<=SR?'อยู่ในพื้นที่ร้าน ('+Math.round(d)+'ม.)':'อยู่นอกพื้นที่ ('+Math.round(d)+'ม.)');},
+    ()=>setGPS(false,'ไม่สามารถรับ GPS ได้'),{enableHighAccuracy:true,maximumAge:10000}
+  );
+}
+function setGPS(ok,msg){gpsOk=ok;const b=document.getElementById('gpsBar');b.className='gb '+(ok?'ok':'err');b.textContent=(ok?'✅ ':'❌ ')+msg;updBtn();}
+function getDist(a,b,c,d){const R=6371000,dA=(c-a)*Math.PI/180,dB=(d-b)*Math.PI/180,x=Math.sin(dA/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dB/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function selE(n){selEmp=n;document.querySelectorAll('.nb2').forEach(b=>b.classList.toggle('sel',b.querySelector('.nm').textContent===n));updStat();updBtn();}
+function updStat(){
+  if(!selEmp)return;
+  const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1];
+  const dot=document.getElementById('sDot'),txt=document.getElementById('sTxt'),t=document.getElementById('sTm');
+  if(!last){dot.className='dt';txt.textContent='ยังไม่ได้เช็คอิน';t.textContent='';}
+  else if(last.type==='เช็คอิน'){dot.className='dt in';txt.textContent='กำลังทำงาน — '+selEmp;t.textContent='เช็คอินเมื่อ '+last.time;}
+  else{dot.className='dt';txt.textContent='เสร็จงานแล้ว — '+selEmp;t.textContent='เช็คเอาท์เมื่อ '+last.time;}
+}
+function updBtn(){
+  const bi=document.getElementById('btnIn'),bo=document.getElementById('btnOut');
+  if(!selEmp||!gpsOk){bi.disabled=true;bo.disabled=true;return;}
+  const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1],ci=last&&last.type==='เช็คอิน';
+  bi.disabled=ci;bo.disabled=!ci;
+}
+async function doCI(type){
+  if(!selEmp)return toast('เลือกชื่อก่อนนะครับ','err');
+  if(!gpsOk)return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
+  const now=new Date(),time=now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),date=now.toLocaleDateString('th-TH');
+  const e={name:selEmp,type,time,date};
+  log.push(e);localStorage.setItem('yg_log',JSON.stringify(log));
+  updStat();updBtn();renderLog();
+  toast(type+'สำเร็จ — '+time,'ok');
+  await post({action:'checkin',...e});
+}
+
+// ── ลา ───────────────────────────────────────────────
+async function subLeave(){
+  const name=document.getElementById('leaveName').value,type=document.getElementById('leaveType').value,date=document.getElementById('leaveDate').value,reason=document.getElementById('leaveReason').value;
+  if(!name)return toast('เลือกชื่อก่อนนะครับ','err');
+  if(!date)return toast('ระบุวันที่ด้วยครับ','err');
+  await post({action:'leave',name,type,date,reason});
+  if(!leaveData[date])leaveData[date]=[];
+  if(!leaveData[date].includes(name))leaveData[date].push(name);
+  renderCalendar();
+  toast('ส่งคำขอลาแล้ว ✅','ok');
+  document.getElementById('leaveReason').value='';
+  loadML();
+}
+async function loadML(){
+  const name=document.getElementById('leaveName').value,card=document.getElementById('mlCard'),list=document.getElementById('mlList');
+  if(!name){card.style.display='none';return;}
+  card.style.display='block';list.innerHTML='<div class="emp">กำลังโหลด...</div>';
+  try{
+    const d=await api('getMyLeaves',{name});const lv=d.leaves||[];
+    if(!lv.length){list.innerHTML='<div class="emp">ไม่มีรายการลา</div>';return;}
+    list.innerHTML=lv.map(l=>{const sc=l.status==='อนุมัติ'?'sok':l.status==='ไม่อนุมัติ'?'sno':'sw2';const cc=l.status==='รออนุมัติ';
+      return '<div class="lvi"><div class="lii"><div class="lit">'+l.type+'</div><div class="lid">📅 '+l.date+(l.reason?' · '+l.reason:'')+'</div></div><span class="lis '+sc+'">'+l.status+'</span>'+(cc?'<button class="bcl" onclick="canLeave(\''+name+'\','+l.row+')">ยกเลิก</button>':'')+'</div>';
+    }).join('');
+  }catch(e){list.innerHTML='<div class="emp">โหลดไม่ได้</div>';}
+}
+async function canLeave(name,row){if(!confirm('ยืนยันยกเลิก?'))return;await post({action:'cancelLeave',name,row});toast('ยกเลิกแล้ว ✅','ok');loadML();}
+
+// ── โอที ─────────────────────────────────────────────
+async function subOT(){
+  const name=document.getElementById('otName').value,date=document.getElementById('otDate').value,start=document.getElementById('otStart').value,end=document.getElementById('otEnd').value;
+  if(!name)return toast('เลือกชื่อก่อนนะครับ','err');
+  if(!start||!end)return toast('ระบุเวลาด้วยครับ','err');
+  const [sh,sm]=start.split(':').map(Number),[eh,em]=end.split(':').map(Number),hrs=Math.round(((eh*60+em)-(sh*60+sm))/60*10)/10;
+  if(hrs<=0)return toast('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม','err');
+  await post({action:'ot',name,date,start,end,hours:hrs});
+  toast('บันทึกโอที '+hrs+' ชม. แล้ว ✅','ok');
+  loadMO();
+}
+async function loadMO(){
+  const name=document.getElementById('otName').value,card=document.getElementById('moCard'),list=document.getElementById('moList');
+  if(!name){card.style.display='none';return;}
+  card.style.display='block';list.innerHTML='<div class="emp">กำลังโหลด...</div>';
+  try{
+    const d=await api('getMyOT',{name});const ots=d.ots||[];
+    if(!ots.length){list.innerHTML='<div class="emp">ไม่มีรายการโอที</div>';return;}
+    list.innerHTML=ots.map(o=>{const sc=o.status==='อนุมัติ'?'sok':o.status==='ไม่อนุมัติ'?'sno':'sw2';const cc=o.status==='รออนุมัติ';
+      return '<div class="lvi"><div class="lii"><div class="lit">⏰ '+o.start+' - '+o.end+' ('+o.hours+' ชม.)</div><div class="lid">📅 '+o.date+'</div></div><span class="lis '+sc+'">'+o.status+'</span>'+(cc?'<button class="bcl" onclick="canOT(\''+name+'\','+o.row+')">ยกเลิก</button>':'')+'</div>';
+    }).join('');
+  }catch(e){list.innerHTML='<div class="emp">โหลดไม่ได้</div>';}
+}
+async function canOT(name,row){if(!confirm('ยืนยันยกเลิก?'))return;await post({action:'cancelOT',name,row});toast('ยกเลิกแล้ว ✅','ok');loadMO();}
+
+// ── ปฏิทิน ───────────────────────────────────────────
+const TM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function chMon(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCalendar();}
+function renderCalendar(){
+  document.getElementById('calT').textContent=TM[calM]+' '+(calY+543);
+  const g=document.getElementById('calG');
+  const dh=['อา','จ','อ','พ','พฤ','ศ','ส'],dc=['sun','','','','','','sat'];
+  let h=dh.map((d,i)=>'<div class="cdh '+dc[i]+'">'+d+'</div>').join('');
+  const fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate(),pd=new Date(calY,calM,0).getDate(),td=new Date();
+  for(let i=fd-1;i>=0;i--)h+='<div class="cday om"><div class="dn">'+(pd-i)+'</div></div>';
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(calY,calM,d),ds=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const dw=dt.getDay(),it=d===td.getDate()&&calM===td.getMonth()&&calY===td.getFullYear();
+    const hol=HOL[ds],lv=leaveData[ds]||[];
+    let cls='cday'+(dw===0?' sun':dw===6?' sat':'')+(it?' today':'')+(hol?' hol':lv.length?' lv':'');
+    let dots='';if(hol)dots+='<div class="dt2" style="background:#C62828"></div>';
+    lv.forEach(n=>{const c=n==='แอม'?'#E76F51':n==='แบม'?'#2D6A4F':'#1565C0';dots+='<div class="dt2" style="background:'+c+'"></div>';});
+    h+='<div class="'+cls+'" onclick="showPop(\''+ds+'\','+d+')"><div class="dn">'+d+'</div><div class="dts">'+dots+'</div></div>';
+  }
+  const rem=(fd+dim)%7;for(let d=1;d<=(rem?7-rem:0);d++)h+='<div class="cday om"><div class="dn">'+d+'</div></div>';
+  g.innerHTML=h;
+}
+
+// ── ประวัติ ───────────────────────────────────────────
+function renderLog(){
+  const l=document.getElementById('logList');
+  if(!log.length){l.innerHTML='<div class="emp">ยังไม่มีบันทึกวันนี้</div>';return;}
+  l.innerHTML=[...log].reverse().map(e=>{const c=e.type==='เช็คอิน'?'in':e.type==='เช็คเอาท์'?'out':e.type==='ลา'?'lv':'ot';
+    return '<div class="lgi"><div class="lt2 '+c+'">'+e.type+'</div><div class="ln">'+e.name+'</div><div class="ltm">'+e.time+'</div></div>';}).join('');
+}
+
+// ── Popup ─────────────────────────────────────────────
+const TDAYS=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const DOM={'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัสบดี'};
+function showPop(ds,d){
+  const dt=new Date(ds),dn=TDAYS[dt.getDay()],hol=HOL[ds],lv=leaveData[ds]||[];
+  document.getElementById('popD').textContent=d+' '+TM[dt.getMonth()]+' '+(dt.getFullYear()+543);
+  document.getElementById('popDy').textContent='วัน'+dn;
+  let h='';
+  if(hol)h+='<div class="ps"><div class="pst">🎌 วันหยุดนักขัตฤกษ์</div><div class="pi hol">🔴 '+hol+'</div></div>';
+  if(lv.length)h+='<div class="ps"><div class="pst">🏖️ ลางาน</div>'+lv.map(n=>'<div class="pi lv">👤 '+n+' — ลางาน</div>').join('')+'</div>';
+  h+='<div class="ps"><div class="pst">👥 สถานะพนักงาน</div>';
+  emp.forEach(n=>{const il=lv.includes(n),id=DOM[n]&&dn.includes(DOM[n].replace('บดี',''));
+    h+=il?'<div class="pi lv">👤 '+n+' — ลางาน</div>':id?'<div class="pi off">👤 '+n+' — วันหยุดประจำ</div>':'<div class="pi wk">👤 '+n+' — ทำงาน</div>';});
+  h+='</div>';
+  document.getElementById('popC').innerHTML=h;
+  document.getElementById('popO').classList.add('show');
+}
+function closePop(e){if(!e||e.target===document.getElementById('popO'))document.getElementById('popO').classList.remove('show');}
+
+// ── Nav ───────────────────────────────────────────────
+function goPage(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(id==='log')renderLog();
+  if(id==='calendar')renderCalendar();
+}
+
+let tt;
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;clearTimeout(tt);tt=setTimeout(()=>t.className='toast',2800);}
+
+init();
+</script>
+</body>
+</html>
