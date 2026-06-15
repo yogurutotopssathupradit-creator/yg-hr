@@ -164,7 +164,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 const SU   = 'https://script.google.com/macros/s/AKfycbxuzng9_PYOoHh3vdQYDoxIsjh4OuCCTMTnlqpwAMLb3mhCCcMjLxU3CW1QjurD0DlV/exec';
 const SLAT = 13.687111, SLNG = 100.532806, SR = 150;
 const EMP  = ['แอม','แบม','มายด์'];
-const DAY_OFF   = {'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัส'};
 const SHIFT_TIME = {'กะ 1':'10:30–19:30','กะ 2':'11:45–20:45'};
 const BASE = new Date('2024-01-01');
 const HOL  = {"2026-01-01":"วันขึ้นปีใหม่","2026-01-02":"ชดเชยวันขึ้นปีใหม่","2026-02-20":"วันมาฆบูชา","2026-04-06":"วันจักรี","2026-04-13":"วันสงกรานต์","2026-04-14":"วันสงกรานต์","2026-04-15":"วันสงกรานต์","2026-05-01":"วันแรงงาน","2026-05-11":"วันวิสาขบูชา","2026-06-03":"วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี","2026-06-04":"ชดเชย","2026-07-29":"วันเฉลิมพระชนมพรรษา ร.10","2026-08-12":"วันแม่แห่งชาติ","2026-10-13":"วันนวมินทรมหาราช","2026-10-23":"วันปิยมหาราช","2026-12-05":"วันพ่อแห่งชาติ","2026-12-07":"ชดเชยวันพ่อ","2026-12-10":"วันรัฐธรรมนูญ","2026-12-31":"วันสิ้นปี"};
@@ -181,21 +180,11 @@ function init() {
   renderSchedule(); renderCalendar();
   loadLeaveData();
 }
-function clearLog() {
-  const t=new Date().toLocaleDateString('th-TH');
-  if(localStorage.getItem('yg_ld')!==t){log=[];localStorage.setItem('yg_log','[]');localStorage.setItem('yg_ld',t);}
-}
-function setDates() {
-  const t=new Date().toISOString().split('T')[0];
-  document.getElementById('leaveDate').value=t;
-  document.getElementById('otDate').value=t;
-}
-function startClock() {
-  const f=()=>{document.getElementById('ck').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});};
-  f(); setInterval(f,1000);
-}
+function clearLog(){const t=new Date().toLocaleDateString('th-TH');if(localStorage.getItem('yg_ld')!==t){log=[];localStorage.setItem('yg_log','[]');localStorage.setItem('yg_ld',t);}}
+function setDates(){const t=new Date().toISOString().split('T')[0];document.getElementById('leaveDate').value=t;document.getElementById('otDate').value=t;}
+function startClock(){const f=()=>{document.getElementById('ck').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});};f();setInterval(f,1000);}
 
-// ── JSONP GET ────────────────────────────
+// ── JSONP (GET) ──────────────────────────
 function api(action, params) {
   return new Promise((ok,err) => {
     const cb='_cb'+Date.now(), s=document.createElement('script');
@@ -208,16 +197,16 @@ function api(action, params) {
   });
 }
 
-// ── JSONP POST (ส่งผ่าน GET parameter) ──
-function post(data) {
-  return new Promise((ok) => {
-    const cb='_post'+Date.now(), s=document.createElement('script');
-    const t=setTimeout(()=>{delete window[cb];try{s.remove();}catch(e){}ok();},8000);
-    window[cb]=()=>{clearTimeout(t);delete window[cb];s.remove();ok();};
-    s.src=SU+'?postdata='+encodeURIComponent(JSON.stringify(data))+'&callback='+cb;
-    s.onerror=()=>{clearTimeout(t);delete window[cb];try{s.remove();}catch(e){}ok();};
-    document.head.appendChild(s);
-  });
+// ── POST (no-cors แบบเดิม) ───────────────
+async function post(data) {
+  try {
+    await fetch(SU, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+  } catch(e) {}
 }
 
 // ── SCHEDULE ─────────────────────────────
@@ -230,7 +219,7 @@ function renderSchedule() {
   document.getElementById('sw').textContent='สัปดาห์ '+fmt(mon)+' - '+fmt(sun)+'/'+sun.getFullYear()+' · วัน'+today;
   const even=weekNum%2===0;
   const staff=[
-    {name:'แอม',   shift:'กะ 1', pos:'ปั่น',          dayOff:'อังคาร'},
+    {name:'แอม',   shift:'กะ 1', pos:'ปั่น',                    dayOff:'อังคาร'},
     {name:'แบม',   shift:'กะ 2', pos:even?'แคชเชียร์':'Topping', dayOff:'พุธ'},
     {name:'มายด์', shift:'กะ 2', pos:even?'Topping':'แคชเชียร์', dayOff:'พฤหัส'},
   ];
@@ -242,44 +231,18 @@ function renderSchedule() {
 }
 
 // ── NAMES ────────────────────────────────
-function renderNames() {
-  document.getElementById('nameGrid').innerHTML=EMP.map(n=>
-    '<button class="nb2" onclick="selE(\''+n+'\')"><div class="av">'+n[0]+'</div><div class="nm">'+n+'</div></button>'
-  ).join('');
-}
-function populateSel() {
-  const o=EMP.map(n=>'<option>'+n+'</option>').join('');
-  document.getElementById('leaveName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;
-  document.getElementById('otName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;
-}
+function renderNames(){document.getElementById('nameGrid').innerHTML=EMP.map(n=>'<button class="nb2" onclick="selE(\''+n+'\')"><div class="av">'+n[0]+'</div><div class="nm">'+n+'</div></button>').join('');}
+function populateSel(){const o=EMP.map(n=>'<option>'+n+'</option>').join('');document.getElementById('leaveName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;document.getElementById('otName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;}
 
 // ── GPS ──────────────────────────────────
-function watchGPS() {
-  if(!navigator.geolocation){setGPS(false,'ไม่รองรับ GPS');return;}
-  navigator.geolocation.watchPosition(
-    p=>{const d=getDist(p.coords.latitude,p.coords.longitude,SLAT,SLNG);setGPS(d<=SR,d<=SR?'อยู่ในพื้นที่ร้าน ('+Math.round(d)+'ม.)':'อยู่นอกพื้นที่ ('+Math.round(d)+'ม.)');},
-    ()=>setGPS(false,'ไม่สามารถรับ GPS ได้'),{enableHighAccuracy:true,maximumAge:10000}
-  );
-}
+function watchGPS(){if(!navigator.geolocation){setGPS(false,'ไม่รองรับ GPS');return;}navigator.geolocation.watchPosition(p=>{const d=getDist(p.coords.latitude,p.coords.longitude,SLAT,SLNG);setGPS(d<=SR,d<=SR?'อยู่ในพื้นที่ร้าน ('+Math.round(d)+'ม.)':'อยู่นอกพื้นที่ ('+Math.round(d)+'ม.)');},()=>setGPS(false,'ไม่สามารถรับ GPS ได้'),{enableHighAccuracy:true,maximumAge:10000});}
 function setGPS(ok,msg){gpsOk=ok;const b=document.getElementById('gpsBar');b.className='gb '+(ok?'ok':'err');b.textContent=(ok?'✅ ':'❌ ')+msg;updBtn();}
 function getDist(a,b,c,d){const R=6371000,dA=(c-a)*Math.PI/180,dB=(d-b)*Math.PI/180,x=Math.sin(dA/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dB/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
 
 // ── CHECKIN ──────────────────────────────
 function selE(n){selEmp=n;document.querySelectorAll('.nb2').forEach(b=>b.classList.toggle('sel',b.querySelector('.nm').textContent===n));updStat();updBtn();}
-function updStat(){
-  if(!selEmp)return;
-  const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1];
-  const dot=document.getElementById('sDot'),txt=document.getElementById('sTxt'),t=document.getElementById('sTm');
-  if(!last){dot.className='dt';txt.textContent='ยังไม่ได้เช็คอิน';t.textContent='';}
-  else if(last.type==='เช็คอิน'){dot.className='dt in';txt.textContent='กำลังทำงาน — '+selEmp;t.textContent='เช็คอินเมื่อ '+last.time;}
-  else{dot.className='dt';txt.textContent='เสร็จงานแล้ว — '+selEmp;t.textContent='เช็คเอาท์เมื่อ '+last.time;}
-}
-function updBtn(){
-  const bi=document.getElementById('btnIn'),bo=document.getElementById('btnOut');
-  if(!selEmp||!gpsOk){bi.disabled=true;bo.disabled=true;return;}
-  const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1],ci=last&&last.type==='เช็คอิน';
-  bi.disabled=ci;bo.disabled=!ci;
-}
+function updStat(){if(!selEmp)return;const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1];const dot=document.getElementById('sDot'),txt=document.getElementById('sTxt'),t=document.getElementById('sTm');if(!last){dot.className='dt';txt.textContent='ยังไม่ได้เช็คอิน';t.textContent='';}else if(last.type==='เช็คอิน'){dot.className='dt in';txt.textContent='กำลังทำงาน — '+selEmp;t.textContent='เช็คอินเมื่อ '+last.time;}else{dot.className='dt';txt.textContent='เสร็จงานแล้ว — '+selEmp;t.textContent='เช็คเอาท์เมื่อ '+last.time;}}
+function updBtn(){const bi=document.getElementById('btnIn'),bo=document.getElementById('btnOut');if(!selEmp||!gpsOk){bi.disabled=true;bo.disabled=true;return;}const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1],ci=last&&last.type==='เช็คอิน';bi.disabled=ci;bo.disabled=!ci;}
 async function doCI(type){
   if(!selEmp)return toast('เลือกชื่อก่อนนะครับ','err');
   if(!gpsOk)return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
@@ -293,8 +256,7 @@ async function doCI(type){
 
 // ── LEAVE ────────────────────────────────
 async function subLeave(){
-  const name=document.getElementById('leaveName').value,type=document.getElementById('leaveType').value,
-        date=document.getElementById('leaveDate').value,reason=document.getElementById('leaveReason').value;
+  const name=document.getElementById('leaveName').value,type=document.getElementById('leaveType').value,date=document.getElementById('leaveDate').value,reason=document.getElementById('leaveReason').value;
   if(!name)return toast('เลือกชื่อก่อนนะครับ','err');
   if(!date)return toast('ระบุวันที่ด้วยครับ','err');
   await post({action:'leave',name,type,date,reason});
@@ -312,22 +274,17 @@ async function loadML(){
   try{
     const d=await api('getMyLeaves',{name}),lv=d.leaves||[];
     if(!lv.length){list.innerHTML='<div class="emp">ไม่มีรายการลา</div>';return;}
-    list.innerHTML=lv.map(l=>{
-      const sc=l.status==='อนุมัติ'?'sok':l.status==='ไม่อนุมัติ'?'sno':'sw2',cc=l.status==='รออนุมัติ';
-      return '<div class="lvi"><div class="lii"><div class="lit">'+l.type+'</div><div class="lid">📅 '+l.date+(l.reason?' · '+l.reason:'')+'</div></div><span class="lis '+sc+'">'+l.status+'</span>'+(cc?'<button class="bcl" onclick="canLeave(\''+name+'\','+l.row+')">ยกเลิก</button>':'')+'</div>';
-    }).join('');
+    list.innerHTML=lv.map(l=>{const sc=l.status==='อนุมัติ'?'sok':l.status==='ไม่อนุมัติ'?'sno':'sw2',cc=l.status==='รออนุมัติ';return '<div class="lvi"><div class="lii"><div class="lit">'+l.type+'</div><div class="lid">📅 '+l.date+(l.reason?' · '+l.reason:'')+'</div></div><span class="lis '+sc+'">'+l.status+'</span>'+(cc?'<button class="bcl" onclick="canLeave(\''+name+'\','+l.row+')">ยกเลิก</button>':'')+'</div>';}).join('');
   }catch(e){list.innerHTML='<div class="emp">โหลดไม่ได้</div>';}
 }
 async function canLeave(name,row){if(!confirm('ยืนยันยกเลิก?'))return;await post({action:'cancelLeave',name,row});toast('ยกเลิกแล้ว ✅','ok');loadML();}
 
 // ── OT ───────────────────────────────────
 async function subOT(){
-  const name=document.getElementById('otName').value,date=document.getElementById('otDate').value,
-        start=document.getElementById('otStart').value,end=document.getElementById('otEnd').value;
+  const name=document.getElementById('otName').value,date=document.getElementById('otDate').value,start=document.getElementById('otStart').value,end=document.getElementById('otEnd').value;
   if(!name)return toast('เลือกชื่อก่อนนะครับ','err');
   if(!start||!end)return toast('ระบุเวลาด้วยครับ','err');
-  const [sh,sm]=start.split(':').map(Number),[eh,em]=end.split(':').map(Number);
-  const hrs=Math.round(((eh*60+em)-(sh*60+sm))/60*10)/10;
+  const [sh,sm]=start.split(':').map(Number),[eh,em]=end.split(':').map(Number),hrs=Math.round(((eh*60+em)-(sh*60+sm))/60*10)/10;
   if(hrs<=0)return toast('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม','err');
   await post({action:'ot',name,date,start,end,hours:hrs});
   toast('บันทึกโอที '+hrs+' ชม. แล้ว ✅','ok');
@@ -340,19 +297,13 @@ async function loadMO(){
   try{
     const d=await api('getMyOT',{name}),ots=d.ots||[];
     if(!ots.length){list.innerHTML='<div class="emp">ไม่มีรายการโอที</div>';return;}
-    list.innerHTML=ots.map(o=>{
-      const sc=o.status==='อนุมัติ'?'sok':o.status==='ไม่อนุมัติ'?'sno':'sw2',cc=o.status==='รออนุมัติ';
-      return '<div class="lvi"><div class="lii"><div class="lit">⏰ '+o.start+' - '+o.end+' ('+o.hours+' ชม.)</div><div class="lid">📅 '+o.date+'</div></div><span class="lis '+sc+'">'+o.status+'</span>'+(cc?'<button class="bcl" onclick="canOT(\''+name+'\','+o.row+')">ยกเลิก</button>':'')+'</div>';
-    }).join('');
+    list.innerHTML=ots.map(o=>{const sc=o.status==='อนุมัติ'?'sok':o.status==='ไม่อนุมัติ'?'sno':'sw2',cc=o.status==='รออนุมัติ';return '<div class="lvi"><div class="lii"><div class="lit">⏰ '+o.start+' - '+o.end+' ('+o.hours+' ชม.)</div><div class="lid">📅 '+o.date+'</div></div><span class="lis '+sc+'">'+o.status+'</span>'+(cc?'<button class="bcl" onclick="canOT(\''+name+'\','+o.row+')">ยกเลิก</button>':'')+'</div>';}).join('');
   }catch(e){list.innerHTML='<div class="emp">โหลดไม่ได้</div>';}
 }
 async function canOT(name,row){if(!confirm('ยืนยันยกเลิก?'))return;await post({action:'cancelOT',name,row});toast('ยกเลิกแล้ว ✅','ok');loadMO();}
 
 // ── CALENDAR ─────────────────────────────
-async function loadLeaveData(){
-  try{const d=await api('getLeaves',{});leaveData=d.leaves||{};}catch(e){}
-  renderCalendar();
-}
+async function loadLeaveData(){try{const d=await api('getLeaves',{});leaveData=d.leaves||{};}catch(e){}renderCalendar();}
 function chMon(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCalendar();}
 function renderCalendar(){
   document.getElementById('calT').textContent=TM[calM]+' '+(calY+543);
@@ -375,14 +326,7 @@ function renderCalendar(){
 }
 
 // ── LOG ──────────────────────────────────
-function renderLog(){
-  const l=document.getElementById('logList');
-  if(!log.length){l.innerHTML='<div class="emp">ยังไม่มีบันทึกวันนี้</div>';return;}
-  l.innerHTML=[...log].reverse().map(e=>{
-    const c=e.type==='เช็คอิน'?'in':e.type==='เช็คเอาท์'?'out':e.type==='ลา'?'lv':'ot';
-    return '<div class="lgi"><div class="lt2 '+c+'">'+e.type+'</div><div class="ln">'+e.name+'</div><div class="ltm">'+e.time+'</div></div>';
-  }).join('');
-}
+function renderLog(){const l=document.getElementById('logList');if(!log.length){l.innerHTML='<div class="emp">ยังไม่มีบันทึกวันนี้</div>';return;}l.innerHTML=[...log].reverse().map(e=>{const c=e.type==='เช็คอิน'?'in':e.type==='เช็คเอาท์'?'out':e.type==='ลา'?'lv':'ot';return '<div class="lgi"><div class="lt2 '+c+'">'+e.type+'</div><div class="ln">'+e.name+'</div><div class="ltm">'+e.time+'</div></div>';}).join('');}
 
 // ── POPUP ────────────────────────────────
 const DOM={'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัส'};
@@ -394,10 +338,7 @@ function showPop(ds,d){
   if(hol)h+='<div class="ps"><div class="pst">🎌 วันหยุดนักขัตฤกษ์</div><div class="pi hol">🔴 '+hol+'</div></div>';
   if(lv.length)h+='<div class="ps"><div class="pst">🏖️ ลางาน</div>'+lv.map(n=>'<div class="pi lv">👤 '+n+' — ลางาน</div>').join('')+'</div>';
   h+='<div class="ps"><div class="pst">👥 สถานะพนักงาน</div>';
-  EMP.forEach(n=>{
-    const il=lv.includes(n),id=DOM[n]&&dn===DOM[n];
-    h+=il?'<div class="pi lv">👤 '+n+' — ลางาน</div>':id?'<div class="pi off">👤 '+n+' — วันหยุดประจำ</div>':'<div class="pi wk">👤 '+n+' — ทำงาน</div>';
-  });
+  EMP.forEach(n=>{const il=lv.includes(n),id=DOM[n]&&dn===DOM[n];h+=il?'<div class="pi lv">👤 '+n+' — ลางาน</div>':id?'<div class="pi off">👤 '+n+' — วันหยุดประจำ</div>':'<div class="pi wk">👤 '+n+' — ทำงาน</div>';});
   h+='</div>';
   document.getElementById('popC').innerHTML=h;
   document.getElementById('popO').classList.add('show');
