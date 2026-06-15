@@ -2,363 +2,807 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="YG Staff">
 <title>YG Staff</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--g:#2D6A4F;--g2:#40916C;--gp:#D8F3DC;--am:#E76F51;--ap:#FDE8D8;--bl:#1565C0;--bp:#E3F2FD;--rd:#C62828;--rp:#FFEBEE;--pu:#6A1B9A;--pp:#F3E5F5;--dk:#1B2028;--md:#4A5568;--lt:#F7F8FA;--r:16px;--sh:0 4px 24px rgba(0,0,0,.10)}
-body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;background:var(--lt);color:var(--dk);min-height:100vh}
-.hd{background:var(--g);color:#fff;padding:16px 16px 20px}
-.ht{display:flex;align-items:center;gap:10px}
-.lg{width:38px;height:38px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
-.br{font-size:17px;font-weight:700}.sb{font-size:12px;opacity:.75}
-.ck{margin-left:auto;background:rgba(255,255,255,.15);border-radius:20px;padding:5px 12px;font-size:15px;font-weight:600;letter-spacing:1px}
-.nv{display:flex;background:#fff;border-bottom:1px solid #E2E8F0;overflow-x:auto}.nv::-webkit-scrollbar{display:none}
-.nb{flex:none;padding:10px 14px;font-size:12px;font-weight:600;color:var(--md);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px}
-.ni{font-size:18px}.nb.active{color:var(--g);border-bottom-color:var(--g)}
-.pg{display:none;padding:14px}.pg.active{display:block}
-.cd{background:#fff;border-radius:var(--r);padding:16px;box-shadow:var(--sh);margin-bottom:12px}
-.cl{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:12px}
-.ng{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.nb2{border:2px solid #E2E8F0;border-radius:12px;padding:12px 8px;background:#fff;cursor:pointer;text-align:center;transition:all .18s}
-.av{width:32px;height:32px;border-radius:50%;background:var(--gp);color:var(--g);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
-.nm{font-size:13px;font-weight:600}
-.nb2.sel{border-color:var(--g);background:var(--gp)}.nb2.sel .av{background:var(--g);color:#fff}
-.sr{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--lt);margin-bottom:12px}
-.dt{width:10px;height:10px;border-radius:50%;background:#CBD5E0;flex-shrink:0}.dt.in{background:var(--g2)}
-.stx{font-size:14px;font-weight:600}.stm{font-size:11px;color:var(--md)}
-.br2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bn{border:none;border-radius:12px;padding:16px 10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;transition:all .18s}
-.bn:active{transform:scale(.96)}.bn:disabled{background:#A0AEC0;cursor:not-allowed}.bni{font-size:22px}
-.bin{background:var(--g);color:#fff}.bot{background:var(--am);color:#fff}
-.gb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--md);padding:10px 12px;border-radius:10px;background:var(--lt);margin-top:10px}
-.gb.ok{background:var(--gp);color:var(--g)}.gb.err{background:var(--ap);color:var(--am)}
-.fg{margin-bottom:12px}.fl{font-size:12px;font-weight:600;color:var(--md);margin-bottom:6px;display:block}
-.fi,.fs{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;color:var(--dk);outline:none;background:#fff}
-.fi:focus,.fs:focus{border-color:var(--g)}
-.bs{width:100%;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;color:#fff}
-.bg{background:var(--g)}.ba{background:var(--am)}
-.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.ct{font-size:17px;font-weight:700}.cn{width:36px;height:36px;border:none;background:var(--gp);border-radius:10px;cursor:pointer;font-size:18px;color:var(--g);display:flex;align-items:center;justify-content:center}
-.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cdh{text-align:center;font-size:11px;font-weight:700;color:var(--md);padding:6px 0}.cdh.sun,.cdh.sat{color:var(--rd)}
-.cday{border-radius:10px;padding:6px 2px;text-align:center;min-height:52px;cursor:pointer}
-.cday .dn{font-size:14px;font-weight:600;margin-bottom:3px}
-.cday.today .dn{background:var(--g);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px}
-.cday.om .dn{color:#CBD5E0}.cday.hol{background:var(--rp)}.cday.lv{background:var(--bp)}
-.cday.sun .dn,.cday.sat .dn{color:var(--rd)}
-.dts{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;min-height:14px}
-.dt2{width:6px;height:6px;border-radius:50%}
-.leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--md)}
-.ld{width:8px;height:8px;border-radius:50%}
-.lgi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--lt);margin-bottom:8px}
-.lt2{font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:20px;min-width:60px;text-align:center}
-.lt2.in{background:var(--gp);color:var(--g)}.lt2.out{background:var(--ap);color:var(--am)}
-.lt2.lv{background:var(--bp);color:var(--bl)}.lt2.ot{background:var(--pp);color:var(--pu)}
-.ln{font-size:13px;font-weight:600;flex:1}.ltm{font-size:11px;color:var(--md)}
-.emp{text-align:center;color:var(--md);font-size:13px;padding:16px 0}
-.sw{font-size:12px;color:var(--md);margin-bottom:12px;text-align:center}
-.sc{border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid transparent}
-.sc.s1{background:var(--bp);border-left-color:var(--bl)}.sc.s2{background:var(--gp);border-left-color:var(--g)}.sc.off{background:var(--ap);border-left-color:var(--am)}
-.sn{font-size:15px;font-weight:700;margin-bottom:4px}.sd{font-size:13px;color:var(--md);margin-bottom:4px}
-.sbg{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;margin-top:4px;background:#fff}
-.lvi{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--lt);margin-bottom:8px}
-.lii{flex:1}.lit{font-size:13px;font-weight:700}.lid{font-size:11px;color:var(--md);margin-top:2px}
-.lis{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
-.sw2{background:#FFF8E1;color:#F9A825}.sok{background:var(--gp);color:var(--g)}.sno{background:var(--rp);color:var(--rd)}
-.bcl{border:none;background:var(--rp);color:var(--rd);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
-.po{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
-.po.show{opacity:1;pointer-events:all}
-.pp{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s cubic-bezier(.175,.885,.32,1.1)}
-.po.show .pp{transform:translateY(0)}
-.ph{width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 16px}
-.pd{font-size:18px;font-weight:700;margin-bottom:4px}.pdy{font-size:13px;color:var(--md);margin-bottom:14px}
-.ps{margin-bottom:14px}.pst{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:8px}
-.pi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;font-size:14px;font-weight:600}
-.pi.hol{background:var(--rp);color:var(--rd)}.pi.lv{background:var(--bp);color:var(--bl)}
-.pi.wk{background:var(--gp);color:var(--g)}.pi.off{background:var(--ap);color:var(--am)}
-.pc{width:100%;border:none;border-radius:12px;padding:13px;background:var(--lt);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--md);margin-top:4px}
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dk);color:#fff;padding:11px 20px;border-radius:28px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.175,.885,.32,1.275);z-index:999;white-space:nowrap}
-.toast.show{transform:translateX(-50%) translateY(0)}.toast.ok{background:var(--g)}.toast.err{background:var(--am)}
+:root{
+  --brown:#2D6A4F;--brown2:#40916C;--brown-pale:#D8F3DC;--brown-light:#F7F8FA;
+  --green:#2D6A4F;--green2:#40916C;--green-pale:#D8F3DC;
+  --amber:#E76F51;--amber-pale:#FDE8D8;
+  --blue:#1565C0;--blue-pale:#E3F2FD;
+  --red:#C62828;--red-pale:#FFEBEE;
+  --purple:#6A1B9A;--purple-pale:#F3E5F5;
+  --dark:#1B2028;--mid:#4A5568;--light:#F7F8FA;--white:#fff;
+  --radius:16px;--shadow:0 4px 24px rgba(0,0,0,0.10);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;background:var(--brown-light);color:var(--dark);min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--green);color:white;padding:16px 16px 20px;}
+.header-top{display:flex;align-items:center;gap:10px;}
+.logo{width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.brand{font-size:17px;font-weight:700;}
+.sub{font-size:12px;opacity:0.75;}
+.clock{margin-left:auto;background:rgba(255,255,255,0.15);border-radius:20px;padding:5px 12px;font-size:15px;font-weight:600;letter-spacing:1px;}
+
+/* NAV */
+.nav{display:flex;background:white;border-bottom:1px solid #E2E8F0;overflow-x:auto;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex:none;padding:10px 14px;font-size:12px;font-weight:600;color:var(--mid);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.nav-btn .nav-icon{font-size:18px;}
+.nav-btn.active{color:var(--green);border-bottom-color:var(--green);}
+
+/* PAGES */
+.page{display:none;padding:14px;}
+.page.active{display:block;}
+
+/* CARD */
+.card{background:white;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+.card-label{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--mid);text-transform:uppercase;margin-bottom:12px;}
+
+/* NAME SELECT */
+.name-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.name-btn{border:2px solid #E2E8F0;border-radius:12px;padding:12px 8px;background:white;cursor:pointer;text-align:center;transition:all 0.18s;}
+.name-btn .av{width:32px;height:32px;border-radius:50%;background:var(--green-pale);color:var(--green);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;}
+.name-btn .nm{font-size:13px;font-weight:600;}
+.name-btn.selected{border-color:var(--green);background:var(--brown-pale);}
+.name-btn.selected .av{background:var(--green);color:white;}
+
+/* STATUS */
+.status-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--light);margin-bottom:12px;}
+.dot{width:10px;height:10px;border-radius:50%;background:#CBD5E0;flex-shrink:0;}
+.dot.in{background:var(--green2);}
+.status-text{font-size:14px;font-weight:600;}
+.status-time{font-size:11px;color:var(--mid);}
+
+/* BUTTONS */
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn{border:none;border-radius:12px;padding:16px 10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;transition:all 0.18s;}
+.btn:active{transform:scale(0.96);}
+.btn:disabled{background:#A0AEC0;cursor:not-allowed;}
+.btn-icon{font-size:22px;}
+.btn-in{background:var(--green);color:white;}
+.btn-out{background:var(--amber);color:white;}
+
+/* GPS */
+.gps-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mid);padding:10px 12px;border-radius:10px;background:var(--light);margin-top:10px;}
+.gps-bar.ok{background:var(--green-pale);color:var(--green);}
+.gps-bar.err{background:var(--amber-pale);color:var(--amber);}
+
+/* FORM */
+.form-group{margin-bottom:12px;}
+.form-label{font-size:12px;font-weight:600;color:var(--mid);margin-bottom:6px;display:block;}
+.form-input,.form-select{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;color:var(--dark);outline:none;background:white;}
+.form-input:focus,.form-select:focus{border-color:var(--green);}
+.btn-submit{width:100%;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;color:white;}
+.btn-brown{background:var(--green);}
+.btn-amber{background:var(--amber);}
+.btn-green{background:var(--green);}
+
+/* CALENDAR */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.cal-title{font-size:17px;font-weight:700;color:var(--dark);}
+.cal-nav{width:36px;height:36px;border:none;background:var(--brown-pale);border-radius:10px;cursor:pointer;font-size:18px;color:var(--brown);display:flex;align-items:center;justify-content:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-day-header{text-align:center;font-size:11px;font-weight:700;color:var(--mid);padding:6px 0;}
+.cal-day-header.sun,.cal-day-header.sat{color:var(--red);}
+.cal-day{border-radius:10px;padding:6px 2px;text-align:center;min-height:52px;cursor:pointer;transition:all 0.15s;position:relative;}
+.cal-day .day-num{font-size:14px;font-weight:600;margin-bottom:3px;}
+.cal-day.today .day-num{background:var(--green);color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;}
+.cal-day.other-month .day-num{color:#CBD5E0;}
+.cal-day.holiday{background:var(--red-pale);}
+.cal-day.has-leave{background:var(--blue-pale);}
+.cal-day.sun .day-num,.cal-day.sat .day-num{color:var(--red);}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;min-height:14px;}
+.cal-dot{width:6px;height:6px;border-radius:50%;}
+.cal-dot.แอม{background:#E76F51;}
+.cal-dot.แบม{background:#2D6A4F;}
+.cal-dot.มายด์{background:#1565C0;}
+.cal-dot.holiday{background:var(--red);}
+.cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mid);}
+.legend-dot{width:8px;height:8px;border-radius:50%;}
+
+/* LOG */
+.log-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--light);margin-bottom:8px;}
+.log-type{font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:20px;min-width:60px;text-align:center;}
+.log-type.in{background:var(--green-pale);color:var(--green);}
+.log-type.out{background:var(--amber-pale);color:var(--amber);}
+.log-type.leave{background:var(--blue-pale);color:var(--blue);}
+.log-type.ot{background:var(--purple-pale);color:var(--purple);}
+.log-name{font-size:13px;font-weight:600;flex:1;}
+.log-time{font-size:11px;color:var(--mid);}
+.empty{text-align:center;color:var(--mid);font-size:13px;padding:16px 0;}
+
+/* SCHEDULE */
+.schedule-card{border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid transparent;}
+.schedule-card.shift1{background:var(--blue-pale);border-left-color:var(--blue);}
+.schedule-card.shift2{background:var(--green-pale);border-left-color:var(--green);}
+.schedule-card.dayoff{background:var(--amber-pale);border-left-color:var(--amber);}
+.schedule-name{font-size:15px;font-weight:700;margin-bottom:4px;}
+.schedule-detail{font-size:13px;color:var(--mid);}
+.schedule-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px;background:white;}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:white;padding:11px 20px;border-radius:28px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.2);transition:transform 0.3s cubic-bezier(.175,.885,.32,1.275);z-index:999;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--amber);}
+
+.leave-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--light);margin-bottom:8px;}
+.leave-item-info{flex:1;}
+.leave-item-type{font-size:13px;font-weight:700;color:var(--dark);}
+.leave-item-date{font-size:11px;color:var(--mid);margin-top:2px;}
+.leave-item-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;}
+.status-wait{background:var(--yellow-pale, #FFF8E1);color:#F9A825;}
+.status-ok{background:var(--green-pale);color:var(--green);}
+.status-no{background:var(--red-pale);color:var(--red);}
+.btn-cancel-leave{border:none;background:var(--red-pale);color:var(--red);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn-cancel-leave:active{transform:scale(0.96);}
+
+
+/* POPUP */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.popup-overlay.show{opacity:1;pointer-events:all;}
+.popup{background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;transform:translateY(100%);transition:transform 0.3s cubic-bezier(.175,.885,.32,1.1);}
+.popup-overlay.show .popup{transform:translateY(0);}
+.popup-handle{width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 16px;}
+.popup-date{font-size:18px;font-weight:700;color:var(--dark);margin-bottom:4px;}
+.popup-day{font-size:13px;color:var(--mid);margin-bottom:14px;}
+.popup-section{margin-bottom:14px;}
+.popup-section-title{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--mid);text-transform:uppercase;margin-bottom:8px;}
+.popup-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;font-size:14px;font-weight:600;}
+.popup-item.holiday{background:var(--red-pale);color:var(--red);}
+.popup-item.leave{background:var(--blue-pale);color:var(--blue);}
+.popup-item.work{background:var(--green-pale);color:var(--green);}
+.popup-item.dayoff{background:var(--amber-pale);color:var(--amber);}
+.popup-close{width:100%;border:none;border-radius:12px;padding:13px;background:var(--light);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--mid);margin-top:4px;}
 </style>
 </head>
 <body>
-<div class="hd"><div class="ht">
-  <div class="lg">🧋</div>
-  <div><div class="br">YG Tops Sathu49</div><div class="sb">ระบบ HR พนักงาน</div></div>
-  <div class="ck" id="ck">--:--</div>
-</div></div>
-<nav class="nv">
-  <button class="nb active" onclick="goPage('checkin',this)"><span class="ni">📍</span>เช็คอิน</button>
-  <button class="nb" onclick="goPage('leave',this)"><span class="ni">🏖️</span>ลางาน</button>
-  <button class="nb" onclick="goPage('ot',this)"><span class="ni">⏰</span>โอที</button>
-  <button class="nb" onclick="goPage('schedule',this)"><span class="ni">📅</span>ตาราง</button>
-  <button class="nb" onclick="goPage('calendar',this)"><span class="ni">🗓️</span>ปฏิทิน</button>
-  <button class="nb" onclick="goPage('log',this)"><span class="ni">📋</span>ประวัติ</button>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🧋</div>
+    <div>
+      <div class="brand">YG Tops Sathu49</div>
+      <div class="sub">ระบบ HR พนักงาน</div>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="goPage('checkin',this)"><span class="nav-icon">📍</span>เช็คอิน</button>
+  <button class="nav-btn" onclick="goPage('leave',this)"><span class="nav-icon">🏖️</span>ลางาน</button>
+  <button class="nav-btn" onclick="goPage('ot',this)"><span class="nav-icon">⏰</span>โอที</button>
+  <button class="nav-btn" onclick="goPage('schedule',this)"><span class="nav-icon">📅</span>ตาราง</button>
+  <button class="nav-btn" onclick="goPage('calendar',this)"><span class="nav-icon">🗓️</span>ปฏิทิน</button>
+  <button class="nav-btn" onclick="goPage('log',this)"><span class="nav-icon">📋</span>ประวัติ</button>
 </nav>
 
-<div class="pg active" id="page-checkin">
-  <div class="cd"><div class="cl">เลือกชื่อของคุณ</div><div class="ng" id="nameGrid"></div></div>
-  <div class="cd">
-    <div class="cl">สถานะวันนี้</div>
-    <div class="sr"><div class="dt" id="sDot"></div><div><div class="stx" id="sTxt">เลือกชื่อก่อน</div><div class="stm" id="sTm"></div></div></div>
-    <div class="br2">
-      <button class="bn bin" id="btnIn" disabled onclick="doCI('เช็คอิน')"><span class="bni">🟢</span>เช็คอิน</button>
-      <button class="bn bot" id="btnOut" disabled onclick="doCI('เช็คเอาท์')"><span class="bni">🔴</span>เช็คเอาท์</button>
+<!-- CHECK IN/OUT -->
+<div class="page active" id="page-checkin">
+  <div class="card">
+    <div class="card-label">เลือกชื่อของคุณ</div>
+    <div class="name-grid" id="nameGrid"><div class="loading">กำลังโหลด...</div></div>
+  </div>
+  <div class="card">
+    <div class="card-label">สถานะวันนี้</div>
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <div>
+        <div class="status-text" id="statusText">เลือกชื่อก่อน</div>
+        <div class="status-time" id="statusTime"></div>
+      </div>
     </div>
-    <div class="gb" id="gpsBar">📍 กำลังตรวจสอบ GPS...</div>
+    <div class="btn-row">
+      <button class="btn btn-in" id="btnIn" disabled onclick="doCheckin('เช็คอิน')">
+        <span class="btn-icon">🟢</span>เช็คอิน
+      </button>
+      <button class="btn btn-out" id="btnOut" disabled onclick="doCheckin('เช็คเอาท์')">
+        <span class="btn-icon">🔴</span>เช็คเอาท์
+      </button>
+    </div>
+    <div class="gps-bar" id="gpsBar">📍 กำลังตรวจสอบ GPS...</div>
   </div>
 </div>
 
-<div class="pg" id="page-leave">
-  <div class="cd">
-    <div class="cl">แจ้งลางาน</div>
-    <div class="fg"><label class="fl">ชื่อพนักงาน</label><select class="fs" id="leaveName" onchange="loadML()"><option value="">-- เลือกชื่อ --</option></select></div>
-    <div class="fg"><label class="fl">ประเภทการลา</label><select class="fs" id="leaveType"><option>ลาป่วย</option><option>ลากิจ</option><option>ลาพักร้อน</option><option>ลาไม่รับเงิน</option></select></div>
-    <div class="fg"><label class="fl">วันที่ลา</label><input class="fi" type="date" id="leaveDate"></div>
-    <div class="fg"><label class="fl">เหตุผล (ไม่บังคับ)</label><input class="fi" type="text" id="leaveReason" placeholder="ระบุเหตุผล"></div>
-    <button class="bs bg" onclick="subLeave()">📤 ส่งคำขอลา</button>
+<!-- LEAVE -->
+<div class="page" id="page-leave">
+  <div class="card">
+    <div class="card-label">แจ้งลางาน</div>
+    <div class="form-group">
+      <label class="form-label">ชื่อพนักงาน</label>
+      <select class="form-select" id="leaveName" onchange="loadMyLeaves()"><option value="">-- เลือกชื่อ --</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ประเภทการลา</label>
+      <select class="form-select" id="leaveType">
+        <option value="ลาป่วย">ลาป่วย</option>
+        <option value="ลากิจ">ลากิจ</option>
+        <option value="ลาพักร้อน">ลาพักร้อน</option>
+        <option value="ลาไม่รับเงิน">ลาไม่รับเงิน</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">วันที่ลา</label>
+      <input class="form-input" type="date" id="leaveDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เหตุผล (ไม่บังคับ)</label>
+      <input class="form-input" type="text" id="leaveReason" placeholder="ระบุเหตุผล">
+    </div>
+    <button class="btn-submit btn-green" onclick="submitLeave()">📤 ส่งคำขอลา</button>
   </div>
-  <div class="cd" id="mlCard" style="display:none"><div class="cl">รายการลาของฉัน</div><div id="mlList"></div></div>
-</div>
 
-<div class="pg" id="page-ot">
-  <div class="cd">
-    <div class="cl">แจ้งโอที</div>
-    <div class="fg"><label class="fl">ชื่อพนักงาน</label><select class="fs" id="otName" onchange="loadMO()"><option value="">-- เลือกชื่อ --</option></select></div>
-    <div class="fg"><label class="fl">วันที่ทำโอที</label><input class="fi" type="date" id="otDate"></div>
-    <div class="fg"><label class="fl">เวลาเริ่ม</label><input class="fi" type="time" id="otStart"></div>
-    <div class="fg"><label class="fl">เวลาสิ้นสุด</label><input class="fi" type="time" id="otEnd"></div>
-    <button class="bs ba" onclick="subOT()">📤 ส่งคำขอโอที</button>
+  <!-- รายการลาของฉัน -->
+  <div class="card" id="myLeaveCard" style="display:none">
+    <div class="card-label">รายการลาของฉัน</div>
+    <div id="myLeaveList"><div class="empty">ไม่มีรายการลา</div></div>
   </div>
-  <div class="cd" id="moCard" style="display:none"><div class="cl">รายการโอทีของฉัน</div><div id="moList"></div></div>
 </div>
 
-<div class="pg" id="page-schedule">
-  <div class="cd"><div class="cl">ตารางกะวันนี้</div><div class="sw" id="sw"></div><div id="scList"></div></div>
+<!-- OT -->
+<div class="page" id="page-ot">
+  <div class="card">
+    <div class="card-label">แจ้งโอที</div>
+    <div class="form-group">
+      <label class="form-label">ชื่อพนักงาน</label>
+      <select class="form-select" id="otName" onchange="loadMyOT()"><option value="">-- เลือกชื่อ --</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">วันที่ทำโอที</label>
+      <input class="form-input" type="date" id="otDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เวลาเริ่ม</label>
+      <input class="form-input" type="time" id="otStart">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เวลาสิ้นสุด</label>
+      <input class="form-input" type="time" id="otEnd">
+    </div>
+    <button class="btn-submit btn-amber" onclick="submitOT()">📤 ส่งคำขอโอที</button>
+  </div>
+
+  <!-- รายการโอทีของฉัน -->
+  <div class="card" id="myOTCard" style="display:none">
+    <div class="card-label">รายการโอทีของฉัน</div>
+    <div id="myOTList"><div class="empty">ไม่มีรายการโอที</div></div>
+  </div>
 </div>
 
-<div class="pg" id="page-calendar">
-  <div class="cd">
-    <div class="ch"><button class="cn" onclick="chMon(-1)">‹</button><div class="ct" id="calT"></div><button class="cn" onclick="chMon(1)">›</button></div>
-    <div class="cg" id="calG"></div>
-    <div class="leg">
-      <div class="li"><div class="ld" style="background:#E76F51"></div>แอม</div>
-      <div class="li"><div class="ld" style="background:#2D6A4F"></div>แบม</div>
-      <div class="li"><div class="ld" style="background:#1565C0"></div>มายด์</div>
-      <div class="li"><div class="ld" style="background:#C62828"></div>วันหยุดนักขัตฤกษ์</div>
+<!-- SCHEDULE -->
+<div class="page" id="page-schedule">
+  <div class="card">
+    <div class="card-label">ตารางกะสัปดาห์นี้</div>
+    <div id="scheduleList"><div class="loading">กำลังโหลด...</div></div>
+  </div>
+</div>
+
+<!-- CALENDAR -->
+<div class="page" id="page-calendar">
+  <div class="card">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-title" id="calTitle">มิถุนายน 2569</div>
+      <button class="cal-nav" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#E76F51"></div>แอม</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A4F"></div>แบม</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1565C0"></div>มายด์</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C62828"></div>วันหยุดนักขัตฤกษ์</div>
     </div>
   </div>
 </div>
 
-<div class="pg" id="page-log"><div class="cd"><div class="cl">ประวัติวันนี้</div><div id="logList"><div class="emp">ยังไม่มีบันทึก</div></div></div></div>
-
-<div class="po" id="popO" onclick="closePop(event)">
-  <div class="pp"><div class="ph"></div><div class="pd" id="popD"></div><div class="pdy" id="popDy"></div><div id="popC"></div><button class="pc" onclick="closePop()">ปิด</button></div>
+<!-- LOG -->
+<div class="page" id="page-log">
+  <div class="card">
+    <div class="card-label">ประวัติวันนี้</div>
+    <div id="logList"><div class="empty">ยังไม่มีบันทึก</div></div>
+  </div>
 </div>
+
+<!-- POPUP -->
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup(event)">
+  <div class="popup">
+    <div class="popup-handle"></div>
+    <div class="popup-date" id="popupDate"></div>
+    <div class="popup-day" id="popupDay"></div>
+    <div id="popupContent"></div>
+    <button class="popup-close" onclick="closePopup()">ปิด</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const SU   = 'https://script.google.com/macros/s/AKfycbxuzng9_PYOoHh3vdQYDoxIsjh4OuCCTMTnlqpwAMLb3mhCCcMjLxU3CW1QjurD0DlV/exec';
-const SLAT = 13.687111, SLNG = 100.532806, SR = 150;
-const EMP  = ['แอม','แบม','มายด์'];
-const SHIFT_TIME = {'กะ 1':'10:30–19:30','กะ 2':'11:45–20:45'};
-const BASE = new Date('2024-01-01');
-const HOL  = {"2026-01-01":"วันขึ้นปีใหม่","2026-01-02":"ชดเชยวันขึ้นปีใหม่","2026-02-20":"วันมาฆบูชา","2026-04-06":"วันจักรี","2026-04-13":"วันสงกรานต์","2026-04-14":"วันสงกรานต์","2026-04-15":"วันสงกรานต์","2026-05-01":"วันแรงงาน","2026-05-11":"วันวิสาขบูชา","2026-06-03":"วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี","2026-06-04":"ชดเชย","2026-07-29":"วันเฉลิมพระชนมพรรษา ร.10","2026-08-12":"วันแม่แห่งชาติ","2026-10-13":"วันนวมินทรมหาราช","2026-10-23":"วันปิยมหาราช","2026-12-05":"วันพ่อแห่งชาติ","2026-12-07":"ชดเชยวันพ่อ","2026-12-10":"วันรัฐธรรมนูญ","2026-12-31":"วันสิ้นปี"};
-const DNAMES = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
-const TM = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbzJI_o31Lq1Pjk23tpQm4Uqq3FPKZ6JflFHpsJRPEhMMcLCJTlVtJf-nq8w64rvLEHx/exec";
+const SHOP_LAT = 13.687111, SHOP_LNG = 100.532806, RADIUS_M = 150;
 
-let selEmp=null, gpsOk=false, leaveData={};
-let calY=new Date().getFullYear(), calM=new Date().getMonth();
-let log=JSON.parse(localStorage.getItem('yg_log')||'[]');
+// วันหยุดนักขัตฤกษ์ 2569
+const HOLIDAYS = {
+  "2026-01-01":"วันขึ้นปีใหม่","2026-01-02":"ชดเชยวันขึ้นปีใหม่",
+  "2026-02-20":"วันมาฆบูชา","2026-04-06":"วันจักรี",
+  "2026-04-13":"วันสงกรานต์","2026-04-14":"วันสงกรานต์","2026-04-15":"วันสงกรานต์",
+  "2026-05-01":"วันแรงงาน","2026-05-11":"วันวิสาขบูชา",
+  "2026-06-03":"วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี","2026-06-04":"ชดเชย",
+  "2026-07-29":"วันเฉลิมพระชนมพรรษา ร.10","2026-08-12":"วันแม่แห่งชาติ",
+  "2026-10-13":"วันนวมินทรมหาราช","2026-10-23":"วันปิยมหาราช",
+  "2026-12-05":"วันพ่อแห่งชาติ","2026-12-07":"ชดเชยวันพ่อ",
+  "2026-12-10":"วันรัฐธรรมนูญ","2026-12-31":"วันสิ้นปี"
+};
 
-function init() {
-  clearLog(); startClock(); watchGPS(); setDates();
-  renderNames(); populateSel();
-  renderSchedule(); renderCalendar();
-  loadLeaveData();
-}
-function clearLog(){const t=new Date().toLocaleDateString('th-TH');if(localStorage.getItem('yg_ld')!==t){log=[];localStorage.setItem('yg_log','[]');localStorage.setItem('yg_ld',t);}}
-function setDates(){const t=new Date().toISOString().split('T')[0];document.getElementById('leaveDate').value=t;document.getElementById('otDate').value=t;}
-function startClock(){const f=()=>{document.getElementById('ck').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});};f();setInterval(f,1000);}
+let selectedEmp = null, gpsOk = false, userLat = null, userLng = null;
+let employees = [];
+let todayLog = JSON.parse(localStorage.getItem('yg_log_v3') || '[]');
+let leaveData = {}; // {dateStr: [names]}
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
 
-// ── JSONP (GET) ──────────────────────────
-function api(action, params) {
-  return new Promise((ok,err) => {
-    const cb='_cb'+Date.now(), s=document.createElement('script');
-    const t=setTimeout(()=>{delete window[cb];s.remove();err(new Error('timeout'));},10000);
-    window[cb]=(d)=>{clearTimeout(t);delete window[cb];s.remove();ok(d);};
-    const p=Object.entries(params||{}).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-    s.src=SU+'?action='+action+(p?'&'+p:'')+'&callback='+cb;
-    s.onerror=()=>{clearTimeout(t);delete window[cb];s.remove();err(new Error('error'));};
-    document.head.appendChild(s);
-  });
+async function init() {
+  clearOldLog();
+  startClock();
+  watchGPS();
+  await loadEmployees();
+  setDefaultDates();
+  renderCalendar();
 }
 
-// ── POST (no-cors แบบเดิม) ───────────────
-async function post(data) {
+function clearOldLog() {
+  const today = new Date().toLocaleDateString('th-TH');
+  if (localStorage.getItem('yg_logdate_v3') !== today) {
+    todayLog = [];
+    localStorage.setItem('yg_log_v3', '[]');
+    localStorage.setItem('yg_logdate_v3', today);
+  }
+}
+
+function setDefaultDates() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('leaveDate').value = today;
+  document.getElementById('otDate').value = today;
+}
+
+function startClock() {
+  const tick = () => {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+  };
+  tick(); setInterval(tick, 1000);
+}
+
+async function loadEmployees() {
   try {
-    await fetch(SU, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(data)
-    });
+    const res = await fetch(`${SHEET_URL}?action=getEmployees`);
+    const data = await res.json();
+    employees = data.names || [];
+  } catch(e) {
+    employees = ['แอม','แบม','มายด์'];
+  }
+  renderNames();
+  populateSelects();
+  renderSchedule();
+  await loadLeaveData();
+}
+
+async function loadLeaveData() {
+  try {
+    const res = await fetch(`${SHEET_URL}?action=getLeaves`);
+    const data = await res.json();
+    leaveData = data.leaves || {};
+    renderCalendar();
   } catch(e) {}
 }
 
-// ── SCHEDULE ─────────────────────────────
+function renderNames() {
+  const grid = document.getElementById('nameGrid');
+  if (!employees.length) { grid.innerHTML = '<div class="empty">ไม่พบข้อมูลพนักงาน</div>'; return; }
+  grid.innerHTML = employees.map(name => `
+    <button class="name-btn" onclick="selectEmp('${name}')">
+      <div class="av">${name[0]}</div>
+      <div class="nm">${name}</div>
+    </button>
+  `).join('');
+}
+
+function populateSelects() {
+  const opts = employees.map(n => `<option value="${n}">${n}</option>`).join('');
+  document.getElementById('leaveName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
+  document.getElementById('otName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
+}
+
+// GPS
+function watchGPS() {
+  if (!navigator.geolocation) { setGps(false, 'ไม่รองรับ GPS'); return; }
+  navigator.geolocation.watchPosition(
+    pos => {
+      userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+      const d = getDist(userLat, userLng, SHOP_LAT, SHOP_LNG);
+      setGps(d <= RADIUS_M, d <= RADIUS_M ? `อยู่ในพื้นที่ร้าน (${Math.round(d)}ม.)` : `อยู่นอกพื้นที่ (${Math.round(d)}ม.)`);
+    },
+    () => setGps(false, 'ไม่สามารถรับ GPS ได้'),
+    {enableHighAccuracy:true, maximumAge:10000}
+  );
+}
+
+function setGps(ok, msg) {
+  gpsOk = ok;
+  const bar = document.getElementById('gpsBar');
+  bar.className = 'gps-bar ' + (ok ? 'ok' : 'err');
+  bar.textContent = (ok ? '✅ ' : '❌ ') + msg;
+  updateBtns();
+}
+
+function getDist(la1,lo1,la2,lo2) {
+  const R=6371000,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function selectEmp(name) {
+  selectedEmp = name;
+  document.querySelectorAll('.name-btn').forEach(b => b.classList.toggle('selected', b.querySelector('.nm').textContent === name));
+  updateStatus(); updateBtns();
+}
+
+function updateStatus() {
+  if (!selectedEmp) return;
+  const logs = todayLog.filter(l => l.name === selectedEmp);
+  const last = logs[logs.length-1];
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const time = document.getElementById('statusTime');
+  if (!last) { dot.className='dot'; text.textContent='ยังไม่ได้เช็คอิน'; time.textContent=''; }
+  else if (last.type==='เช็คอิน') { dot.className='dot in'; text.textContent=`กำลังทำงาน — ${selectedEmp}`; time.textContent=`เช็คอินเมื่อ ${last.time}`; }
+  else { dot.className='dot'; text.textContent=`เสร็จงานแล้ว — ${selectedEmp}`; time.textContent=`เช็คเอาท์เมื่อ ${last.time}`; }
+}
+
+function updateBtns() {
+  const btnIn=document.getElementById('btnIn'),btnOut=document.getElementById('btnOut');
+  if (!selectedEmp||!gpsOk) { btnIn.disabled=true; btnOut.disabled=true; return; }
+  const logs=todayLog.filter(l=>l.name===selectedEmp);
+  const last=logs[logs.length-1];
+  const checkedIn=last&&last.type==='เช็คอิน';
+  btnIn.disabled=checkedIn; btnOut.disabled=!checkedIn;
+}
+
+async function doCheckin(type) {
+  if (!selectedEmp) return toast('เลือกชื่อก่อนนะครับ','err');
+  if (!gpsOk) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
+  const now = new Date();
+  const time = now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const date = now.toLocaleDateString('th-TH');
+  const entry = {name:selectedEmp,type,time,date};
+  todayLog.push(entry);
+  localStorage.setItem('yg_log_v3',JSON.stringify(todayLog));
+  updateStatus(); updateBtns(); renderLog();
+  toast(`${type}สำเร็จ — ${time}`,'ok');
+  await sendToSheet({action:'checkin',...entry});
+}
+
+async function submitLeave() {
+  const name=document.getElementById('leaveName').value;
+  const type=document.getElementById('leaveType').value;
+  const date=document.getElementById('leaveDate').value;
+  const reason=document.getElementById('leaveReason').value;
+  if (!name) return toast('เลือกชื่อก่อนนะครับ','err');
+  if (!date) return toast('ระบุวันที่ด้วยครับ','err');
+  
+  await sendToSheet({action:'leave',name,type,date,reason});
+  
+  // อัพเดท local calendar
+  if (!leaveData[date]) leaveData[date] = [];
+  if (!leaveData[date].includes(name)) leaveData[date].push(name);
+  renderCalendar();
+  
+  const entry={name,type:`ลา`,time:date,date:new Date().toLocaleDateString('th-TH')};
+  todayLog.push(entry); localStorage.setItem('yg_log_v3',JSON.stringify(todayLog));
+  renderLog();
+  toast(`ส่งคำขอลาแล้ว ✅`,'ok');
+  document.getElementById('leaveReason').value='';
+  await loadMyLeaves();
+}
+
+// โหลดรายการลาของพนักงานที่เลือก
+async function loadMyLeaves() {
+  const name = document.getElementById('leaveName').value;
+  const card = document.getElementById('myLeaveCard');
+  const list = document.getElementById('myLeaveList');
+  if (!name) { card.style.display='none'; return; }
+  card.style.display='block';
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try {
+    const res = await fetch(`${SHEET_URL}?action=getMyLeaves&name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    const leaves = data.leaves || [];
+    if (!leaves.length) { list.innerHTML='<div class="empty">ไม่มีรายการลา</div>'; return; }
+    list.innerHTML = leaves.map((l,i) => {
+      const statusCls = l.status==='อนุมัติ'?'status-ok':l.status==='ไม่อนุมัติ'?'status-no':'status-wait';
+      const canCancel = l.status === 'รออนุมัติ';
+      return `<div class="leave-item">
+        <div class="leave-item-info">
+          <div class="leave-item-type">${l.type}</div>
+          <div class="leave-item-date">📅 ${l.date} ${l.reason ? '· '+l.reason : ''}</div>
+        </div>
+        <span class="leave-item-status ${statusCls}">${l.status}</span>
+        ${canCancel ? `<button class="btn-cancel-leave" onclick="cancelLeave('${name}',${l.row})">ยกเลิก</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML='<div class="empty">โหลดไม่ได้ ลองใหม่อีกครั้ง</div>';
+  }
+}
+
+// ยกเลิกการลา
+async function cancelLeave(name, row) {
+  if (!confirm(`ยืนยันยกเลิกการลานี้?`)) return;
+  await sendToSheet({action:'cancelLeave', name, row});
+  toast('ยกเลิกการลาแล้ว ✅','ok');
+  await loadMyLeaves();
+  await loadLeaveData();
+  renderCalendar();
+}
+
+async function submitOT() {
+  const name=document.getElementById('otName').value;
+  const date=document.getElementById('otDate').value;
+  const start=document.getElementById('otStart').value;
+  const end=document.getElementById('otEnd').value;
+  if (!name) return toast('เลือกชื่อก่อนนะครับ','err');
+  if (!start||!end) return toast('ระบุเวลาด้วยครับ','err');
+  const hrs=calcHours(start,end);
+  if (hrs <= 0) return toast('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม','err');
+  await sendToSheet({action:'ot',name,date,start,end,hours:hrs});
+  toast(`บันทึกโอที ${hrs} ชม. แล้ว ✅`,'ok');
+  await loadMyOT();
+}
+
+async function loadMyOT() {
+  const name = document.getElementById('otName').value;
+  const card = document.getElementById('myOTCard');
+  const list = document.getElementById('myOTList');
+  if (!name) { card.style.display='none'; return; }
+  card.style.display='block';
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try {
+    const res = await fetch(`${SHEET_URL}?action=getMyOT&name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    const ots = data.ots || [];
+    if (!ots.length) { list.innerHTML='<div class="empty">ไม่มีรายการโอที</div>'; return; }
+    list.innerHTML = ots.map(o => {
+      const statusCls = o.status==='อนุมัติ'?'status-ok':o.status==='ไม่อนุมัติ'?'status-no':'status-wait';
+      const canCancel = o.status === 'รออนุมัติ';
+      return `<div class="leave-item">
+        <div class="leave-item-info">
+          <div class="leave-item-type">⏰ ${o.start} - ${o.end} (${o.hours} ชม.)</div>
+          <div class="leave-item-date">📅 ${o.date}</div>
+        </div>
+        <span class="leave-item-status ${statusCls}">${o.status}</span>
+        ${canCancel ? `<button class="btn-cancel-leave" onclick="cancelOT('${name}',${o.row})">ยกเลิก</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML='<div class="empty">โหลดไม่ได้ ลองใหม่อีกครั้ง</div>';
+  }
+}
+
+async function cancelOT(name, row) {
+  if (!confirm('ยืนยันยกเลิกโอทีนี้?')) return;
+  await sendToSheet({action:'cancelOT', name, row});
+  toast('ยกเลิกโอทีแล้ว ✅','ok');
+  await loadMyOT();
+}
+
+function calcHours(s,e) {
+  const [sh,sm]=s.split(':').map(Number),[eh,em]=e.split(':').map(Number);
+  return Math.round(((eh*60+em)-(sh*60+sm))/60*10)/10;
+}
+
+// SCHEDULE
 function renderSchedule() {
-  const now=new Date(), today=DNAMES[now.getDay()];
-  const weekNum=Math.floor((now-BASE)/(7*24*3600*1000));
-  const mon=new Date(now); mon.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1));
-  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
-  const fmt=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
-  document.getElementById('sw').textContent='สัปดาห์ '+fmt(mon)+' - '+fmt(sun)+'/'+sun.getFullYear()+' · วัน'+today;
-  const even=weekNum%2===0;
-  const staff=[
-    {name:'แอม',   shift:'กะ 1', pos:'ปั่น',                    dayOff:'อังคาร'},
-    {name:'แบม',   shift:'กะ 2', pos:even?'แคชเชียร์':'Topping', dayOff:'พุธ'},
-    {name:'มายด์', shift:'กะ 2', pos:even?'Topping':'แคชเชียร์', dayOff:'พฤหัส'},
-  ];
-  document.getElementById('scList').innerHTML=staff.map(s=>{
-    if(today===s.dayOff) return '<div class="sc off"><div class="sn">'+s.name+'</div><div class="sd">🏖️ วันหยุดประจำ</div></div>';
-    const cls=s.shift==='กะ 1'?'s1':'s2';
-    return '<div class="sc '+cls+'"><div class="sn">'+s.name+'</div><div class="sd">⏰ '+s.shift+': '+SHIFT_TIME[s.shift]+'</div><span class="sbg">🏷️ '+s.pos+'</span></div>';
+  const POSITIONS=['แคชเชียร์','ปั่น','Topping'];
+  const DAY_OFF={'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัส'};
+  const list=document.getElementById('scheduleList');
+  if (!employees.length) { list.innerHTML='<div class="empty">ไม่พบข้อมูล</div>'; return; }
+  const weeks=Math.floor((Date.now()-new Date('2024-01-01'))/(7*24*3600*1000));
+  const rotation=Math.floor(weeks/2)%3;
+  const today=new Date().toLocaleDateString('th-TH',{weekday:'long'}).replace('วัน','');
+
+  list.innerHTML = employees.map((name,idx) => {
+    const dayOff = DAY_OFF[name] || '';
+    const isOff = today.includes(dayOff);
+    const pos = POSITIONS[(idx+rotation)%3];
+    const shift = ((Math.floor(weeks/2)+idx)%2)+1;
+    const time = shift===1?'10:30–19:30':'11:45–20:45';
+    if (isOff) return `
+      <div class="schedule-card dayoff">
+        <div class="schedule-name">${name}</div>
+        <div class="schedule-detail">🏖️ วันหยุดประจำ (${dayOff})</div>
+      </div>`;
+    return `
+      <div class="schedule-card ${shift===1?'shift1':'shift2'}">
+        <div class="schedule-name">${name}</div>
+        <div class="schedule-detail">⏰ กะ ${shift}: ${time}</div>
+        <span class="schedule-badge">🏷️ ${pos}</span>
+      </div>`;
   }).join('');
 }
 
-// ── NAMES ────────────────────────────────
-function renderNames(){document.getElementById('nameGrid').innerHTML=EMP.map(n=>'<button class="nb2" onclick="selE(\''+n+'\')"><div class="av">'+n[0]+'</div><div class="nm">'+n+'</div></button>').join('');}
-function populateSel(){const o=EMP.map(n=>'<option>'+n+'</option>').join('');document.getElementById('leaveName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;document.getElementById('otName').innerHTML='<option value="">-- เลือกชื่อ --</option>'+o;}
+// CALENDAR
+const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const THAI_YEAR_OFFSET = 543;
 
-// ── GPS ──────────────────────────────────
-function watchGPS(){if(!navigator.geolocation){setGPS(false,'ไม่รองรับ GPS');return;}navigator.geolocation.watchPosition(p=>{const d=getDist(p.coords.latitude,p.coords.longitude,SLAT,SLNG);setGPS(d<=SR,d<=SR?'อยู่ในพื้นที่ร้าน ('+Math.round(d)+'ม.)':'อยู่นอกพื้นที่ ('+Math.round(d)+'ม.)');},()=>setGPS(false,'ไม่สามารถรับ GPS ได้'),{enableHighAccuracy:true,maximumAge:10000});}
-function setGPS(ok,msg){gpsOk=ok;const b=document.getElementById('gpsBar');b.className='gb '+(ok?'ok':'err');b.textContent=(ok?'✅ ':'❌ ')+msg;updBtn();}
-function getDist(a,b,c,d){const R=6371000,dA=(c-a)*Math.PI/180,dB=(d-b)*Math.PI/180,x=Math.sin(dA/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dB/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
-
-// ── CHECKIN ──────────────────────────────
-function selE(n){selEmp=n;document.querySelectorAll('.nb2').forEach(b=>b.classList.toggle('sel',b.querySelector('.nm').textContent===n));updStat();updBtn();}
-function updStat(){if(!selEmp)return;const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1];const dot=document.getElementById('sDot'),txt=document.getElementById('sTxt'),t=document.getElementById('sTm');if(!last){dot.className='dt';txt.textContent='ยังไม่ได้เช็คอิน';t.textContent='';}else if(last.type==='เช็คอิน'){dot.className='dt in';txt.textContent='กำลังทำงาน — '+selEmp;t.textContent='เช็คอินเมื่อ '+last.time;}else{dot.className='dt';txt.textContent='เสร็จงานแล้ว — '+selEmp;t.textContent='เช็คเอาท์เมื่อ '+last.time;}}
-function updBtn(){const bi=document.getElementById('btnIn'),bo=document.getElementById('btnOut');if(!selEmp||!gpsOk){bi.disabled=true;bo.disabled=true;return;}const ls=log.filter(l=>l.name===selEmp),last=ls[ls.length-1],ci=last&&last.type==='เช็คอิน';bi.disabled=ci;bo.disabled=!ci;}
-async function doCI(type){
-  if(!selEmp)return toast('เลือกชื่อก่อนนะครับ','err');
-  if(!gpsOk)return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
-  const now=new Date(),time=now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),date=now.toLocaleDateString('th-TH');
-  const e={name:selEmp,type,time,date};
-  log.push(e);localStorage.setItem('yg_log',JSON.stringify(log));
-  updStat();updBtn();renderLog();
-  toast(type+'สำเร็จ — '+time,'ok');
-  await post({action:'checkin',...e});
-}
-
-// ── LEAVE ────────────────────────────────
-async function subLeave(){
-  const name=document.getElementById('leaveName').value,type=document.getElementById('leaveType').value,date=document.getElementById('leaveDate').value,reason=document.getElementById('leaveReason').value;
-  if(!name)return toast('เลือกชื่อก่อนนะครับ','err');
-  if(!date)return toast('ระบุวันที่ด้วยครับ','err');
-  await post({action:'leave',name,type,date,reason});
-  if(!leaveData[date])leaveData[date]=[];
-  if(!leaveData[date].includes(name))leaveData[date].push(name);
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
   renderCalendar();
-  toast('ส่งคำขอลาแล้ว ✅','ok');
-  document.getElementById('leaveReason').value='';
-  loadML();
 }
-async function loadML(){
-  const name=document.getElementById('leaveName').value,card=document.getElementById('mlCard'),list=document.getElementById('mlList');
-  if(!name){card.style.display='none';return;}
-  card.style.display='block';list.innerHTML='<div class="emp">กำลังโหลด...</div>';
-  try{
-    const d=await api('getMyLeaves',{name}),lv=d.leaves||[];
-    if(!lv.length){list.innerHTML='<div class="emp">ไม่มีรายการลา</div>';return;}
-    list.innerHTML=lv.map(l=>{const sc=l.status==='อนุมัติ'?'sok':l.status==='ไม่อนุมัติ'?'sno':'sw2',cc=l.status==='รออนุมัติ';return '<div class="lvi"><div class="lii"><div class="lit">'+l.type+'</div><div class="lid">📅 '+l.date+(l.reason?' · '+l.reason:'')+'</div></div><span class="lis '+sc+'">'+l.status+'</span>'+(cc?'<button class="bcl" onclick="canLeave(\''+name+'\','+l.row+')">ยกเลิก</button>':'')+'</div>';}).join('');
-  }catch(e){list.innerHTML='<div class="emp">โหลดไม่ได้</div>';}
-}
-async function canLeave(name,row){if(!confirm('ยืนยันยกเลิก?'))return;await post({action:'cancelLeave',name,row});toast('ยกเลิกแล้ว ✅','ok');loadML();}
 
-// ── OT ───────────────────────────────────
-async function subOT(){
-  const name=document.getElementById('otName').value,date=document.getElementById('otDate').value,start=document.getElementById('otStart').value,end=document.getElementById('otEnd').value;
-  if(!name)return toast('เลือกชื่อก่อนนะครับ','err');
-  if(!start||!end)return toast('ระบุเวลาด้วยครับ','err');
-  const [sh,sm]=start.split(':').map(Number),[eh,em]=end.split(':').map(Number),hrs=Math.round(((eh*60+em)-(sh*60+sm))/60*10)/10;
-  if(hrs<=0)return toast('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม','err');
-  await post({action:'ot',name,date,start,end,hours:hrs});
-  toast('บันทึกโอที '+hrs+' ชม. แล้ว ✅','ok');
-  loadMO();
-}
-async function loadMO(){
-  const name=document.getElementById('otName').value,card=document.getElementById('moCard'),list=document.getElementById('moList');
-  if(!name){card.style.display='none';return;}
-  card.style.display='block';list.innerHTML='<div class="emp">กำลังโหลด...</div>';
-  try{
-    const d=await api('getMyOT',{name}),ots=d.ots||[];
-    if(!ots.length){list.innerHTML='<div class="emp">ไม่มีรายการโอที</div>';return;}
-    list.innerHTML=ots.map(o=>{const sc=o.status==='อนุมัติ'?'sok':o.status==='ไม่อนุมัติ'?'sno':'sw2',cc=o.status==='รออนุมัติ';return '<div class="lvi"><div class="lii"><div class="lit">⏰ '+o.start+' - '+o.end+' ('+o.hours+' ชม.)</div><div class="lid">📅 '+o.date+'</div></div><span class="lis '+sc+'">'+o.status+'</span>'+(cc?'<button class="bcl" onclick="canOT(\''+name+'\','+o.row+')">ยกเลิก</button>':'')+'</div>';}).join('');
-  }catch(e){list.innerHTML='<div class="emp">โหลดไม่ได้</div>';}
-}
-async function canOT(name,row){if(!confirm('ยืนยันยกเลิก?'))return;await post({action:'cancelOT',name,row});toast('ยกเลิกแล้ว ✅','ok');loadMO();}
-
-// ── CALENDAR ─────────────────────────────
-async function loadLeaveData(){try{const d=await api('getLeaves',{});leaveData=d.leaves||{};}catch(e){}renderCalendar();}
-function chMon(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCalendar();}
-function renderCalendar(){
-  document.getElementById('calT').textContent=TM[calM]+' '+(calY+543);
-  const g=document.getElementById('calG');
-  const dh=['อา','จ','อ','พ','พฤ','ศ','ส'],dc=['sun','','','','','','sat'];
-  let h=dh.map((d,i)=>'<div class="cdh '+dc[i]+'">'+d+'</div>').join('');
-  const fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate(),pd=new Date(calY,calM,0).getDate(),td=new Date();
-  for(let i=fd-1;i>=0;i--)h+='<div class="cday om"><div class="dn">'+(pd-i)+'</div></div>';
-  for(let d=1;d<=dim;d++){
-    const dt=new Date(calY,calM,d),ds=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const dw=dt.getDay(),it=d===td.getDate()&&calM===td.getMonth()&&calY===td.getFullYear();
-    const hol=HOL[ds],lv=leaveData[ds]||[];
-    let cls='cday'+(dw===0?' sun':dw===6?' sat':'')+(it?' today':'')+(hol?' hol':lv.length?' lv':'');
-    let dots='';if(hol)dots+='<div class="dt2" style="background:#C62828"></div>';
-    lv.forEach(n=>{const c=n==='แอม'?'#E76F51':n==='แบม'?'#2D6A4F':'#1565C0';dots+='<div class="dt2" style="background:'+c+'"></div>';});
-    h+='<div class="'+cls+'" onclick="showPop(\''+ds+'\','+d+')"><div class="dn">'+d+'</div><div class="dts">'+dots+'</div></div>';
+function renderCalendar() {
+  const thaiYear = calYear + THAI_YEAR_OFFSET;
+  document.getElementById('calTitle').textContent = `${THAI_MONTHS[calMonth]} ${thaiYear}`;
+  
+  const grid = document.getElementById('calGrid');
+  const dayHeaders = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const dayClasses = ['sun','','','','','','sat'];
+  
+  let html = dayHeaders.map((d,i) => `<div class="cal-day-header ${dayClasses[i]}">${d}</div>`).join('');
+  
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+  const today = new Date();
+  
+  // prev month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    html += `<div class="cal-day other-month"><div class="day-num">${daysInPrevMonth - i}</div></div>`;
   }
-  const rem=(fd+dim)%7;for(let d=1;d<=(rem?7-rem:0);d++)h+='<div class="cday om"><div class="dn">'+d+'</div></div>';
-  g.innerHTML=h;
+  
+  // current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(calYear, calMonth, d);
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayOfWeek = date.getDay();
+    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const holiday = HOLIDAYS[dateStr];
+    const leaves = leaveData[dateStr] || [];
+    
+    let cls = 'cal-day';
+    if (dayOfWeek === 0) cls += ' sun';
+    if (dayOfWeek === 6) cls += ' sat';
+    if (isToday) cls += ' today';
+    if (holiday) cls += ' holiday';
+    else if (leaves.length) cls += ' has-leave';
+    
+    let dots = '';
+    if (holiday) dots += `<div class="cal-dot holiday" title="${holiday}"></div>`;
+    leaves.forEach(name => { dots += `<div class="cal-dot ${name}" title="${name}ลา"></div>`; });
+    
+    html += `<div class="${cls}" onclick="showDayPopup('${dateStr}',${d})">
+      <div class="day-num">${d}</div>
+      <div class="cal-dots">${dots}</div>
+    </div>`;
+  }
+  
+  // next month
+  const totalCells = firstDay + daysInMonth;
+  const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let d = 1; d <= remaining; d++) {
+    html += `<div class="cal-day other-month"><div class="day-num">${d}</div></div>`;
+  }
+  
+  grid.innerHTML = html;
 }
 
-// ── LOG ──────────────────────────────────
-function renderLog(){const l=document.getElementById('logList');if(!log.length){l.innerHTML='<div class="emp">ยังไม่มีบันทึกวันนี้</div>';return;}l.innerHTML=[...log].reverse().map(e=>{const c=e.type==='เช็คอิน'?'in':e.type==='เช็คเอาท์'?'out':e.type==='ลา'?'lv':'ot';return '<div class="lgi"><div class="lt2 '+c+'">'+e.type+'</div><div class="ln">'+e.name+'</div><div class="ltm">'+e.time+'</div></div>';}).join('');}
-
-// ── POPUP ────────────────────────────────
-const DOM={'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัส'};
-function showPop(ds,d){
-  const dt=new Date(ds),dn=DNAMES[dt.getDay()],hol=HOL[ds],lv=leaveData[ds]||[];
-  document.getElementById('popD').textContent=d+' '+TM[dt.getMonth()]+' '+(dt.getFullYear()+543);
-  document.getElementById('popDy').textContent='วัน'+dn;
-  let h='';
-  if(hol)h+='<div class="ps"><div class="pst">🎌 วันหยุดนักขัตฤกษ์</div><div class="pi hol">🔴 '+hol+'</div></div>';
-  if(lv.length)h+='<div class="ps"><div class="pst">🏖️ ลางาน</div>'+lv.map(n=>'<div class="pi lv">👤 '+n+' — ลางาน</div>').join('')+'</div>';
-  h+='<div class="ps"><div class="pst">👥 สถานะพนักงาน</div>';
-  EMP.forEach(n=>{const il=lv.includes(n),id=DOM[n]&&dn===DOM[n];h+=il?'<div class="pi lv">👤 '+n+' — ลางาน</div>':id?'<div class="pi off">👤 '+n+' — วันหยุดประจำ</div>':'<div class="pi wk">👤 '+n+' — ทำงาน</div>';});
-  h+='</div>';
-  document.getElementById('popC').innerHTML=h;
-  document.getElementById('popO').classList.add('show');
+// LOG
+function renderLog() {
+  const list = document.getElementById('logList');
+  if (!todayLog.length) { list.innerHTML='<div class="empty">ยังไม่มีบันทึกวันนี้</div>'; return; }
+  list.innerHTML = [...todayLog].reverse().map(l => {
+    const cls = l.type==='เช็คอิน'?'in':l.type==='เช็คเอาท์'?'out':l.type==='ลา'?'leave':'ot';
+    return `<div class="log-item">
+      <div class="log-type ${cls}">${l.type}</div>
+      <div class="log-name">${l.name}</div>
+      <div class="log-time">${l.time}</div>
+    </div>`;
+  }).join('');
 }
-function closePop(e){if(!e||e.target===document.getElementById('popO'))document.getElementById('popO').classList.remove('show');}
 
-// ── NAV ──────────────────────────────────
-function goPage(id,btn){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+// SHEET
+async function sendToSheet(data) {
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  } catch(e) {}
+}
+
+// POPUP
+const THAI_DAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const DAY_OFF_MAP = {'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัสบดี'};
+
+function showDayPopup(dateStr, d) {
+  const date = new Date(dateStr);
+  const thaiYear = date.getFullYear() + THAI_YEAR_OFFSET;
+  const dayName = THAI_DAYS[date.getDay()];
+  const holiday = HOLIDAYS[dateStr];
+  const leaves = leaveData[dateStr] || [];
+
+  document.getElementById('popupDate').textContent = `${d} ${THAI_MONTHS[date.getMonth()]} ${thaiYear}`;
+  document.getElementById('popupDay').textContent = `วัน${dayName}`;
+
+  let html = '';
+
+  // วันหยุดนักขัตฤกษ์
+  if (holiday) {
+    html += `<div class="popup-section">
+      <div class="popup-section-title">🎌 วันหยุดนักขัตฤกษ์</div>
+      <div class="popup-item holiday">🔴 ${holiday}</div>
+    </div>`;
+  }
+
+  // การลา
+  if (leaves.length) {
+    html += `<div class="popup-section">
+      <div class="popup-section-title">🏖️ ลางาน</div>
+      ${leaves.map(name => `<div class="popup-item leave">👤 ${name} — ลางาน</div>`).join('')}
+    </div>`;
+  }
+
+  // สถานะพนักงานวันนี้
+  html += `<div class="popup-section">
+    <div class="popup-section-title">👥 สถานะพนักงาน</div>`;
+  employees.forEach(name => {
+    const isLeave = leaves.includes(name);
+    const isDayOff = DAY_OFF_MAP[name] && dayName.includes(DAY_OFF_MAP[name].replace('บดี',''));
+    if (isLeave) {
+      html += `<div class="popup-item leave">👤 ${name} — ลางาน</div>`;
+    } else if (isDayOff) {
+      html += `<div class="popup-item dayoff">👤 ${name} — วันหยุดประจำ</div>`;
+    } else {
+      html += `<div class="popup-item work">👤 ${name} — ทำงาน</div>`;
+    }
+  });
+  html += '</div>';
+
+  if (!holiday && !leaves.length) {
+    html += `<div class="popup-item work" style="margin-bottom:14px">✅ ไม่มีการลาและไม่มีวันหยุดพิเศษ</div>`;
+  }
+
+  document.getElementById('popupContent').innerHTML = html;
+  document.getElementById('popupOverlay').classList.add('show');
+}
+
+function closePopup(e) {
+  if (!e || e.target === document.getElementById('popupOverlay')) {
+    document.getElementById('popupOverlay').classList.remove('show');
+  }
+}
+
+// NAV
+function goPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  if(btn)btn.classList.add('active');
-  if(id==='log')renderLog();
-  if(id==='calendar')renderCalendar();
-  if(id==='schedule')renderSchedule();
+  if (btn) btn.classList.add('active');
+  if (id==='log') renderLog();
+  if (id==='calendar') renderCalendar();
 }
 
-// ── TOAST ────────────────────────────────
+// TOAST
 let tt;
-function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;clearTimeout(tt);tt=setTimeout(()=>t.className='toast',2800);}
+function toast(msg,type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(tt); tt=setTimeout(()=>t.className='toast',2800);
+}
 
 init();
 </script>
