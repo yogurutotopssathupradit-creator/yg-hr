@@ -1,0 +1,97 @@
+YG HR Web App
+
+This project is a simple staff HR web app connected to Google Sheets.
+
+Main links
+
+Web app:
+https://yogurutotopssathupradit-creator.github.io/yg-hr/
+
+Google Sheet:
+https://docs.google.com/spreadsheets/d/1IOAqxlOhbJrESNDzdkE5yd44sDGPJy9yD_u6UbOkCXE/edit?gid=463698880#gid=463698880
+
+Apps Script Web App:
+https://script.google.com/macros/s/AKfycbxPwTQW5BL9yMZhbkCfe_br1CPU6mjBiw1nJ-1N3v6H1rDAlW1-0kEoEA32K9ohwIkcMg/exec
+
+
+How it works
+
+1. Staff open the web app on their phone.
+2. The web app sends requests to Apps Script.
+3. Apps Script reads and writes data in the Google Sheet.
+4. The Google Sheet is the main database.
+
+
+Where to edit data
+
+Employee names:
+Edit the "พนักงาน" tab.
+Only rows with "ตำแหน่ง" set to "พนักงาน" will appear in the web app.
+
+Check-in and check-out records:
+Saved in the "เช็คอิน-เอาท์" tab.
+
+Leave requests:
+Saved in the "ลางาน" tab.
+Admin can change the status in the sheet.
+
+OT requests:
+Saved in the "โอที" tab.
+Admin can change the status in the sheet.
+
+Schedule:
+Edit the "ตารางกะ" tab.
+
+Public holidays:
+Edit the "วันหยุดนักขัตฤกษ์" tab.
+
+
+Important rules
+
+Do not rename sheet tabs unless the code is also updated.
+
+When adding a new employee, make sure:
+- Name is in the "ชื่อ" column.
+- Position is exactly "พนักงาน".
+- OT rate is filled in the "อัตราโอที/ชม." column.
+- Day off is filled in the "วันหยุดประจำ" column.
+
+If the employee does not appear in the web app, check that the position is exactly:
+พนักงาน
+
+
+When code changes
+
+If index.html changes:
+Push the file to GitHub so GitHub Pages updates the web app.
+
+If Apps Script changes:
+You must deploy a new Apps Script version.
+
+Steps:
+1. Open Apps Script.
+2. Paste the updated Apps Script code.
+3. Click Deploy > Manage deployments.
+4. Edit the Web App deployment.
+5. Choose New version.
+6. Click Deploy.
+
+Just clicking Run is not enough for the live web app.
+
+
+Apps Script deployment settings
+
+Execute as:
+Me
+
+Who has access:
+Anyone
+
+The Google Sheet itself can remain private. Apps Script is the public gate that the web app uses.
+
+
+Security note
+
+The app uses a shared secret token to block casual access to the Apps Script API.
+
+This is basic protection only. A technical person could still inspect the web app code. For stronger protection, add employee PINs or Google login later.

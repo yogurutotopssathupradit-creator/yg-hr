@@ -98,9 +98,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .cal-day.sun .day-num,.cal-day.sat .day-num{color:var(--red);}
 .cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;min-height:14px;}
 .cal-dot{width:6px;height:6px;border-radius:50%;}
-.cal-dot.แอม{background:#E76F51;}
-.cal-dot.แบม{background:#2D6A4F;}
-.cal-dot.มายด์{background:#1565C0;}
 .cal-dot.holiday{background:var(--red);}
 .cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mid);}
@@ -289,14 +286,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
   <div class="card">
     <div class="cal-header">
       <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
-      <div class="cal-title" id="calTitle">มิถุนายน 2569</div>
+      <div class="cal-title" id="calTitle"></div>
       <button class="cal-nav" onclick="changeMonth(1)">›</button>
     </div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="cal-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#E76F51"></div>แอม</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#2D6A4F"></div>แบม</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#1565C0"></div>มายด์</div>
+      <div id="employeeLegend"></div>
       <div class="legend-item"><div class="legend-dot" style="background:#C62828"></div>วันหยุดนักขัตฤกษ์</div>
     </div>
   </div>
@@ -324,24 +319,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 <div class="toast" id="toast"></div>
 
 <script>
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbzJI_o31Lq1Pjk23tpQm4Uqq3FPKZ6JflFHpsJRPEhMMcLCJTlVtJf-nq8w64rvLEHx/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycby8EFgi0JyfaRE0qODln06SPgnIPIbN_0Kb5TPYbtR7tkNe-vcYQZ3UKge_-0sHlhElKA/exec";
+const APP_SECRET = "yg_hr_2026_h7m4Q9vT2kP8sR6n";
 const SHOP_LAT = 13.687111, SHOP_LNG = 100.532806, RADIUS_M = 150;
 
-// วันหยุดนักขัตฤกษ์ 2569
-const HOLIDAYS = {
-  "2026-01-01":"วันขึ้นปีใหม่","2026-01-02":"ชดเชยวันขึ้นปีใหม่",
-  "2026-02-20":"วันมาฆบูชา","2026-04-06":"วันจักรี",
-  "2026-04-13":"วันสงกรานต์","2026-04-14":"วันสงกรานต์","2026-04-15":"วันสงกรานต์",
-  "2026-05-01":"วันแรงงาน","2026-05-11":"วันวิสาขบูชา",
-  "2026-06-03":"วันเฉลิมพระชนมพรรษาสมเด็จพระราชินี","2026-06-04":"ชดเชย",
-  "2026-07-29":"วันเฉลิมพระชนมพรรษา ร.10","2026-08-12":"วันแม่แห่งชาติ",
-  "2026-10-13":"วันนวมินทรมหาราช","2026-10-23":"วันปิยมหาราช",
-  "2026-12-05":"วันพ่อแห่งชาติ","2026-12-07":"ชดเชยวันพ่อ",
-  "2026-12-10":"วันรัฐธรรมนูญ","2026-12-31":"วันสิ้นปี"
-};
+let HOLIDAYS = {};
 
 let selectedEmp = null, gpsOk = false, userLat = null, userLng = null;
 let employees = [];
+let employeeDetails = {};
+let employeeColors = {};
+let scheduleData = null;
 let todayLog = JSON.parse(localStorage.getItem('yg_log_v3') || '[]');
 let leaveData = {}; // {dateStr: [names]}
 let calYear = new Date().getFullYear();
@@ -352,6 +340,8 @@ async function init() {
   startClock();
   watchGPS();
   await loadEmployees();
+  await loadHolidayData();
+  await loadScheduleData();
   setDefaultDates();
   renderCalendar();
 }
@@ -366,7 +356,7 @@ function clearOldLog() {
 }
 
 function setDefaultDates() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = dateKey(new Date());
   document.getElementById('leaveDate').value = today;
   document.getElementById('otDate').value = today;
 }
@@ -381,24 +371,44 @@ function startClock() {
 
 async function loadEmployees() {
   try {
-    const res = await fetch(`${SHEET_URL}?action=getEmployees`);
-    const data = await res.json();
+    const data = await apiGet('getEmployees');
+    if (data.status && data.status !== 'ok') throw new Error(data.message || 'โหลดรายชื่อไม่ได้');
     employees = data.names || [];
+    employeeDetails = {};
+    (data.employees || []).forEach(emp => { employeeDetails[emp.name] = emp; });
+    employeeColors = buildEmployeeColors(employees);
   } catch(e) {
-    employees = ['แอม','แบม','มายด์'];
+    employees = [];
+    employeeColors = {};
+    toast('เชื่อมต่อรายชื่อจาก Sheet ไม่ได้','err');
   }
   renderNames();
   populateSelects();
+  renderEmployeeLegend();
   renderSchedule();
   await loadLeaveData();
 }
 
 async function loadLeaveData() {
   try {
-    const res = await fetch(`${SHEET_URL}?action=getLeaves`);
-    const data = await res.json();
+    const data = await apiGet('getLeaves');
     leaveData = data.leaves || {};
     renderCalendar();
+  } catch(e) {}
+}
+
+async function loadHolidayData() {
+  try {
+    const data = await apiGet('getHolidays');
+    if (data.holidays) HOLIDAYS = data.holidays;
+  } catch(e) {}
+}
+
+async function loadScheduleData() {
+  try {
+    const data = await apiGet('getSchedule');
+    scheduleData = data;
+    renderSchedule();
   } catch(e) {}
 }
 
@@ -419,6 +429,21 @@ function populateSelects() {
   document.getElementById('otName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
 }
 
+function buildEmployeeColors(names) {
+  const palette = ['#E76F51','#2D6A4F','#1565C0','#6A1B9A','#F9A825','#00897B','#AD1457','#5D4037','#3949AB','#00838F'];
+  const colors = {};
+  names.forEach((name, idx) => { colors[name] = palette[idx % palette.length]; });
+  return colors;
+}
+
+function renderEmployeeLegend() {
+  const legend = document.getElementById('employeeLegend');
+  if (!legend) return;
+  legend.innerHTML = employees.map(name => `
+    <div class="legend-item"><div class="legend-dot" style="background:${employeeColors[name] || '#1565C0'}"></div>${name}</div>
+  `).join('');
+}
+
 // GPS
 function watchGPS() {
   if (!navigator.geolocation) { setGps(false, 'ไม่รองรับ GPS'); return; }
@@ -426,7 +451,7 @@ function watchGPS() {
     pos => {
       userLat = pos.coords.latitude; userLng = pos.coords.longitude;
       const d = getDist(userLat, userLng, SHOP_LAT, SHOP_LNG);
-      setGps(d <= RADIUS_M, d <= RADIUS_M ? `อยู่ในพื้นที่ร้าน (${Math.round(d)}ม.)` : `อยู่นอกพื้นที่ (${Math.round(d)}ม.)`);
+      setGps(d <= RADIUS_M, d <= RADIUS_M ? `อยู่ในพื้นที่ร้าน (${formatDistance(d)})` : `อยู่นอกพื้นที่ (${formatDistance(d)})`);
     },
     () => setGps(false, 'ไม่สามารถรับ GPS ได้'),
     {enableHighAccuracy:true, maximumAge:10000}
@@ -445,6 +470,11 @@ function getDist(la1,lo1,la2,lo2) {
   const R=6371000,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
   const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function formatDistance(meters) {
+  if (meters < 1000) return `${Math.round(meters)}ม.`;
+  return `${(meters/1000).toFixed(1)}กม.`;
 }
 
 function selectEmp(name) {
@@ -479,13 +509,17 @@ async function doCheckin(type) {
   if (!gpsOk) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-  const date = now.toLocaleDateString('th-TH');
+  const date = dateKey(now);
   const entry = {name:selectedEmp,type,time,date};
-  todayLog.push(entry);
-  localStorage.setItem('yg_log_v3',JSON.stringify(todayLog));
-  updateStatus(); updateBtns(); renderLog();
-  toast(`${type}สำเร็จ — ${time}`,'ok');
-  await sendToSheet({action:'checkin',...entry});
+  try {
+    await sendToSheet({action:'checkin',...entry});
+    todayLog.push(entry);
+    localStorage.setItem('yg_log_v3',JSON.stringify(todayLog));
+    updateStatus(); updateBtns(); renderLog();
+    toast(`${type}สำเร็จ — ${time}`,'ok');
+  } catch(e) {
+    toast('บันทึกลง Sheet ไม่สำเร็จ','err');
+  }
 }
 
 async function submitLeave() {
@@ -496,7 +530,11 @@ async function submitLeave() {
   if (!name) return toast('เลือกชื่อก่อนนะครับ','err');
   if (!date) return toast('ระบุวันที่ด้วยครับ','err');
   
-  await sendToSheet({action:'leave',name,type,date,reason});
+  try {
+    await sendToSheet({action:'leave',name,type,date,reason});
+  } catch(e) {
+    return toast('ส่งคำขอลาไม่สำเร็จ','err');
+  }
   
   // อัพเดท local calendar
   if (!leaveData[date]) leaveData[date] = [];
@@ -520,8 +558,7 @@ async function loadMyLeaves() {
   card.style.display='block';
   list.innerHTML='<div class="empty">กำลังโหลด...</div>';
   try {
-    const res = await fetch(`${SHEET_URL}?action=getMyLeaves&name=${encodeURIComponent(name)}`);
-    const data = await res.json();
+    const data = await apiGet('getMyLeaves', {name});
     const leaves = data.leaves || [];
     if (!leaves.length) { list.innerHTML='<div class="empty">ไม่มีรายการลา</div>'; return; }
     list.innerHTML = leaves.map((l,i) => {
@@ -544,11 +581,15 @@ async function loadMyLeaves() {
 // ยกเลิกการลา
 async function cancelLeave(name, row) {
   if (!confirm(`ยืนยันยกเลิกการลานี้?`)) return;
-  await sendToSheet({action:'cancelLeave', name, row});
-  toast('ยกเลิกการลาแล้ว ✅','ok');
-  await loadMyLeaves();
-  await loadLeaveData();
-  renderCalendar();
+  try {
+    await sendToSheet({action:'cancelLeave', name, row});
+    toast('ยกเลิกการลาแล้ว ✅','ok');
+    await loadMyLeaves();
+    await loadLeaveData();
+    renderCalendar();
+  } catch(e) {
+    toast('ยกเลิกการลาไม่สำเร็จ','err');
+  }
 }
 
 async function submitOT() {
@@ -560,9 +601,14 @@ async function submitOT() {
   if (!start||!end) return toast('ระบุเวลาด้วยครับ','err');
   const hrs=calcHours(start,end);
   if (hrs <= 0) return toast('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม','err');
-  await sendToSheet({action:'ot',name,date,start,end,hours:hrs});
-  toast(`บันทึกโอที ${hrs} ชม. แล้ว ✅`,'ok');
-  await loadMyOT();
+  const rate = (employeeDetails[name] && employeeDetails[name].otRate) || undefined;
+  try {
+    await sendToSheet({action:'ot',name,date,start,end,hours:hrs,rate});
+    toast(`บันทึกโอที ${hrs} ชม. แล้ว ✅`,'ok');
+    await loadMyOT();
+  } catch(e) {
+    toast('บันทึกโอทีไม่สำเร็จ','err');
+  }
 }
 
 async function loadMyOT() {
@@ -573,8 +619,7 @@ async function loadMyOT() {
   card.style.display='block';
   list.innerHTML='<div class="empty">กำลังโหลด...</div>';
   try {
-    const res = await fetch(`${SHEET_URL}?action=getMyOT&name=${encodeURIComponent(name)}`);
-    const data = await res.json();
+    const data = await apiGet('getMyOT', {name});
     const ots = data.ots || [];
     if (!ots.length) { list.innerHTML='<div class="empty">ไม่มีรายการโอที</div>'; return; }
     list.innerHTML = ots.map(o => {
@@ -596,9 +641,13 @@ async function loadMyOT() {
 
 async function cancelOT(name, row) {
   if (!confirm('ยืนยันยกเลิกโอทีนี้?')) return;
-  await sendToSheet({action:'cancelOT', name, row});
-  toast('ยกเลิกโอทีแล้ว ✅','ok');
-  await loadMyOT();
+  try {
+    await sendToSheet({action:'cancelOT', name, row});
+    toast('ยกเลิกโอทีแล้ว ✅','ok');
+    await loadMyOT();
+  } catch(e) {
+    toast('ยกเลิกโอทีไม่สำเร็จ','err');
+  }
 }
 
 function calcHours(s,e) {
@@ -608,30 +657,48 @@ function calcHours(s,e) {
 
 // SCHEDULE
 function renderSchedule() {
-  const POSITIONS=['แคชเชียร์','ปั่น','Topping'];
-  const DAY_OFF={'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัส'};
   const list=document.getElementById('scheduleList');
   if (!employees.length) { list.innerHTML='<div class="empty">ไม่พบข้อมูล</div>'; return; }
-  const weeks=Math.floor((Date.now()-new Date('2024-01-01'))/(7*24*3600*1000));
-  const rotation=Math.floor(weeks/2)%3;
   const today=new Date().toLocaleDateString('th-TH',{weekday:'long'}).replace('วัน','');
+  const sheetPositions = (scheduleData && scheduleData.positions) || [];
+  const shiftTimes = (scheduleData && scheduleData.shiftTimes) || {};
+
+  if (scheduleData && scheduleData.shifts && scheduleData.shifts.length) {
+    list.innerHTML = scheduleData.shifts.map(item => {
+      const dayInfo = item.days && item.days[today] ? item.days[today] : {};
+      const shiftText = dayInfo.shift || '';
+      const pos = dayInfo.position || '';
+      const isOff = shiftText === 'หยุด' || pos === '-';
+      if (isOff) return `
+        <div class="schedule-card dayoff">
+          <div class="schedule-name">${item.name}</div>
+          <div class="schedule-detail">🏖️ วันหยุดประจำ</div>
+        </div>`;
+
+      const shift = shiftText.includes('2') ? 2 : 1;
+      const time = shiftTimes[shiftText] || '';
+      return `
+        <div class="schedule-card ${shift===1?'shift1':'shift2'}">
+          <div class="schedule-name">${item.name}</div>
+          <div class="schedule-detail">⏰ ${shiftText || 'กะ '+shift}${time ? ': '+time : ''}</div>
+          <span class="schedule-badge">🏷️ ${pos || sheetPositions[0] || '-'}</span>
+        </div>`;
+    }).join('');
+    return;
+  }
 
   list.innerHTML = employees.map((name,idx) => {
-    const dayOff = DAY_OFF[name] || '';
+    const dayOff = (employeeDetails[name] && employeeDetails[name].dayOff) || '';
     const isOff = today.includes(dayOff);
-    const pos = POSITIONS[(idx+rotation)%3];
-    const shift = ((Math.floor(weeks/2)+idx)%2)+1;
-    const time = shift===1?'10:30–19:30':'11:45–20:45';
     if (isOff) return `
       <div class="schedule-card dayoff">
         <div class="schedule-name">${name}</div>
         <div class="schedule-detail">🏖️ วันหยุดประจำ (${dayOff})</div>
       </div>`;
     return `
-      <div class="schedule-card ${shift===1?'shift1':'shift2'}">
+      <div class="schedule-card shift1">
         <div class="schedule-name">${name}</div>
-        <div class="schedule-detail">⏰ กะ ${shift}: ${time}</div>
-        <span class="schedule-badge">🏷️ ${pos}</span>
+        <div class="schedule-detail">ไม่พบข้อมูลตารางกะจาก Sheet</div>
       </div>`;
   }).join('');
 }
@@ -685,7 +752,9 @@ function renderCalendar() {
     
     let dots = '';
     if (holiday) dots += `<div class="cal-dot holiday" title="${holiday}"></div>`;
-    leaves.forEach(name => { dots += `<div class="cal-dot ${name}" title="${name}ลา"></div>`; });
+    leaves.forEach(name => {
+      dots += `<div class="cal-dot" style="background:${employeeColors[name] || '#1565C0'}" title="${name}ลา"></div>`;
+    });
     
     html += `<div class="${cls}" onclick="showDayPopup('${dateStr}',${d})">
       <div class="day-num">${d}</div>
@@ -718,15 +787,91 @@ function renderLog() {
 }
 
 // SHEET
+function ensureApiConfigured() {
+  if (!SHEET_URL || SHEET_URL.includes('PASTE_DEPLOYED')) {
+    throw new Error('ยังไม่ได้ตั้งค่า Apps Script URL');
+  }
+}
+
+function buildApiUrl(action, params={}) {
+  ensureApiConfigured();
+  const url = new URL(SHEET_URL);
+  url.searchParams.set('action', action);
+  url.searchParams.set('token', APP_SECRET);
+  Object.entries(params).forEach(([key,value]) => {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
+  });
+  return url.toString();
+}
+
+async function apiGet(action, params={}) {
+  const data = await jsonpGet(action, params);
+  if (data.status && data.status !== 'ok') throw new Error(data.message || 'API error');
+  return data;
+}
+
+function jsonpGet(action, params={}) {
+  ensureApiConfigured();
+  return new Promise((resolve, reject) => {
+    const callback = `ygApi_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let done = false;
+    const cleanup = () => {
+      delete window[callback];
+      script.remove();
+    };
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error('API timeout'));
+    }, 15000);
+
+    window[callback] = data => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error('API load failed'));
+    };
+
+    script.src = buildApiUrl(action, {...params, callback});
+    document.head.appendChild(script);
+  });
+}
+
+async function apiPost(data) {
+  ensureApiConfigured();
+  await fetch(SHEET_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({...data, token:APP_SECRET})
+  });
+  return {status:'ok'};
+}
+
 async function sendToSheet(data) {
-  try {
-    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-  } catch(e) {}
+  return apiPost(data);
+}
+
+function dateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
 }
 
 // POPUP
 const THAI_DAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-const DAY_OFF_MAP = {'แอม':'อังคาร','แบม':'พุธ','มายด์':'พฤหัสบดี'};
 
 function showDayPopup(dateStr, d) {
   const date = new Date(dateStr);
@@ -761,7 +906,8 @@ function showDayPopup(dateStr, d) {
     <div class="popup-section-title">👥 สถานะพนักงาน</div>`;
   employees.forEach(name => {
     const isLeave = leaves.includes(name);
-    const isDayOff = DAY_OFF_MAP[name] && dayName.includes(DAY_OFF_MAP[name].replace('บดี',''));
+    const dayOff = employeeDetails[name] && employeeDetails[name].dayOff;
+    const isDayOff = dayOff && dayName.includes(dayOff.replace('บดี',''));
     if (isLeave) {
       html += `<div class="popup-item leave">👤 ${name} — ลางาน</div>`;
     } else if (isDayOff) {
@@ -794,6 +940,7 @@ function goPage(id, btn) {
   if (btn) btn.classList.add('active');
   if (id==='log') renderLog();
   if (id==='calendar') renderCalendar();
+  if (id==='schedule') loadScheduleData();
 }
 
 // TOAST

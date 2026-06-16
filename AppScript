@@ -1,0 +1,578 @@
+// YG Tops Sathu49 HR System - Google Apps Script JSON API
+// Deploy as Web app:
+// Execute as: Me
+// Who has access: Anyone
+
+const SPREADSHEET_ID = "1P9Hl80PDTMGWq0s5ztlVGp4pAWE4EdFs1qHLXwwa8og";
+const TIMEZONE = "Asia/Bangkok";
+const APP_SECRET = "yg_hr_2026_h7m4Q9vT2kP8sR6n";
+
+const SHEETS = {
+  employees: "พนักงาน",
+  checkins: "เช็คอิน-เอาท์",
+  schedule: "ตารางกะ",
+  leaves: "ลางาน",
+  ot: "โอที",
+  holidays: "วันหยุดนักขัตฤกษ์",
+  quota: "โควต้าการลา"
+};
+
+function doGet(e) {
+  try {
+    const params = (e && e.parameter) || {};
+    const action = params.action || "ping";
+
+    if (action === "ping") return output(params, { status: "ok" });
+    assertAuthorized(params);
+    if (action === "getEmployees") return output(params, getEmployeesData());
+    if (action === "getLeaves") return output(params, getLeavesData());
+    if (action === "getMyLeaves") return output(params, getMyLeavesData(params.name));
+    if (action === "getMyOT") return output(params, getMyOTData(params.name));
+    if (action === "getSchedule") return output(params, getScheduleData());
+    if (action === "getHolidays") return output(params, getHolidaysData());
+    if (action === "getQuota") return output(params, getQuotaData(params.name, params.userId));
+
+    return output(params, { status: "error", message: "Unknown action: " + action });
+  } catch (err) {
+    const params = (e && e.parameter) || {};
+    return output(params, { status: "error", message: String(err && err.message ? err.message : err) });
+  }
+}
+
+function doPost(e) {
+  try {
+    const data = parseBody(e);
+    const action = data.action || "";
+    assertAuthorized(data);
+
+    if (action === "checkin") return jsonOutput(doCheckin(data));
+    if (action === "leave") return jsonOutput(doLeave(data));
+    if (action === "cancelLeave") return jsonOutput(doCancelLeave(data));
+    if (action === "ot") return jsonOutput(doOT(data));
+    if (action === "cancelOT") return jsonOutput(doCancelOT(data));
+
+    return jsonOutput({ status: "error", message: "Unknown action: " + action });
+  } catch (err) {
+    return jsonOutput({ status: "error", message: String(err && err.message ? err.message : err) });
+  }
+}
+
+function getEmployeesData() {
+  const sheet = getSheet(SHEETS.employees);
+  const values = sheet.getDataRange().getValues();
+  const headerIndex = findRow(values, "รหัส", 0);
+  if (headerIndex < 0) throw new Error("Header not found: รหัส in " + sheet.getName());
+  const employees = [];
+
+  values.slice(headerIndex + 1).forEach(row => {
+    if (isEmptyRow(row)) return;
+    if (clean(row[0]).indexOf("💡") === 0) return;
+    const name = clean(row[1]);
+    const role = clean(row[2]);
+    if (name && role === "พนักงาน") {
+      employees.push({
+        id: clean(row[0]),
+        name,
+        role,
+        phone: clean(row[3]),
+        startDate: toDisplayDate(row[4]),
+        salary: row[5] || "",
+        otRate: Number(row[6]) || 0,
+        dayOff: clean(row[7]),
+        userId: clean(row[8]),
+        note: clean(row[9])
+      });
+    }
+  });
+
+  return { status: "ok", names: employees.map(emp => emp.name), employees };
+}
+
+function getLeavesData() {
+  const sheet = getSheet(SHEETS.leaves);
+  const table = getTable(sheet, "วันที่ยื่น");
+  const leaves = {};
+  const items = [];
+
+  table.rows.forEach((row, index) => {
+    const name = clean(row[1]);
+    const startDate = normalizeDateKey(row[3]);
+    const status = clean(row[7]) || "รออนุมัติ";
+    if (!name || !startDate || status === "ไม่อนุมัติ" || status === "ยกเลิก") return;
+
+    if (!leaves[startDate]) leaves[startDate] = [];
+    if (leaves[startDate].indexOf(name) === -1) leaves[startDate].push(name);
+
+    items.push({
+      row: table.headerRow + 1 + index,
+      submitted: toDisplayDate(row[0]),
+      name,
+      type: clean(row[2]),
+      date: startDate,
+      endDate: normalizeDateKey(row[4]),
+      days: Number(row[5]) || 1,
+      reason: clean(row[6]),
+      status
+    });
+  });
+
+  return { status: "ok", leaves, items };
+}
+
+function getMyLeavesData(name) {
+  const target = clean(name);
+  if (!target) return { status: "ok", leaves: [] };
+
+  const sheet = getSheet(SHEETS.leaves);
+  const table = getTable(sheet, "วันที่ยื่น");
+  const leaves = [];
+
+  table.rows.forEach((row, index) => {
+    if (clean(row[1]) !== target) return;
+    const status = clean(row[7]) || "รออนุมัติ";
+    if (status === "ยกเลิก") return;
+    leaves.push({
+      row: table.headerRow + 1 + index,
+      submitted: toDisplayDate(row[0]),
+      name: clean(row[1]),
+      type: clean(row[2]),
+      date: normalizeDateKey(row[3]) || toDisplayDate(row[3]),
+      endDate: normalizeDateKey(row[4]) || toDisplayDate(row[4]),
+      days: Number(row[5]) || 1,
+      reason: clean(row[6]),
+      status
+    });
+  });
+
+  leaves.reverse();
+  return { status: "ok", leaves };
+}
+
+function getMyOTData(name) {
+  const target = clean(name);
+  if (!target) return { status: "ok", ots: [] };
+
+  const sheet = getSheet(SHEETS.ot);
+  const table = getTable(sheet, "วันที่");
+  const ots = [];
+
+  table.rows.forEach((row, index) => {
+    if (clean(row[1]) !== target) return;
+    const status = clean(row[8]) || "รออนุมัติ";
+    if (status === "ยกเลิก") return;
+    ots.push({
+      row: table.headerRow + 1 + index,
+      date: normalizeDateKey(row[0]) || toDisplayDate(row[0]),
+      name: clean(row[1]),
+      start: clean(row[2]),
+      end: clean(row[3]),
+      hours: Number(row[4]) || 0,
+      rate: Number(row[5]) || 0,
+      total: Number(row[6]) || 0,
+      dayStatus: clean(row[7]),
+      status
+    });
+  });
+
+  ots.reverse();
+  return { status: "ok", ots };
+}
+
+function getScheduleData() {
+  const sheet = getSheet(SHEETS.schedule);
+  const values = sheet.getDataRange().getValues();
+  const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
+  const shiftHeader = findRow(values, "พนักงาน", 0);
+  const positionHeader = findRow(values, "พนักงาน", 0, shiftHeader + 1);
+  const week = shiftHeader > 0 ? clean(values[shiftHeader][1]) : "";
+  const shifts = [];
+  const shiftTimes = parseShiftTimes(values);
+  const positions = [];
+
+  if (shiftHeader < 0) return { status: "ok", week: "", days, shifts, shiftTimes, positions };
+
+  for (let r = shiftHeader + 1; r < values.length; r++) {
+    const name = clean(values[r][0]);
+    if (!name || name.indexOf("💡") === 0 || name === "สัปดาห์ที่:") continue;
+    if (positionHeader > -1 && r >= positionHeader) break;
+
+    const item = { name, days: {} };
+    days.forEach((day, idx) => {
+      item.days[day] = { shift: clean(values[r][idx + 1]), position: "" };
+    });
+    shifts.push(item);
+  }
+
+  if (positionHeader > -1) {
+    for (let r = positionHeader + 1; r < values.length; r++) {
+      const name = clean(values[r][0]);
+      if (!name || name.indexOf("💡") === 0 || name === "สัปดาห์ที่:") continue;
+      const item = shifts.filter(s => s.name === name)[0];
+      if (!item) continue;
+      days.forEach((day, idx) => {
+        const position = clean(values[r][idx + 1]);
+        item.days[day].position = position;
+        if (position && position !== "-" && positions.indexOf(position) === -1) positions.push(position);
+      });
+    }
+  }
+
+  return { status: "ok", week, days, shifts, shiftTimes, positions };
+}
+
+function getHolidaysData() {
+  const sheet = getSheet(SHEETS.holidays);
+  const table = getTable(sheet, "วันที่");
+  const holidays = {};
+  const items = [];
+
+  table.rows.forEach(row => {
+    const date = normalizeDateKey(row[0]);
+    if (!date) return;
+    const item = {
+      date,
+      day: clean(row[1]),
+      name: clean(row[2]),
+      pay: Number(row[3]) || 0
+    };
+    holidays[date] = item.name;
+    items.push(item);
+  });
+
+  return { status: "ok", holidays, items };
+}
+
+function getQuotaData(name, userId) {
+  const targetName = clean(name) || getNameByUserId(userId);
+  if (!targetName) return { status: "error", message: "Employee not found" };
+
+  const sheet = getSheet(SHEETS.quota);
+  const table = getTable(sheet, "ชื่อ");
+  for (let i = 0; i < table.rows.length; i++) {
+    const row = table.rows[i];
+    if (clean(row[0]) === targetName) {
+      return {
+        status: "ok",
+        name: targetName,
+        sick: { quota: row[1] || 0, used: row[2] || 0, left: row[3] || 0 },
+        business: { quota: row[4] || 0, used: row[5] || 0, left: row[6] || 0 },
+        vacation: { quota: row[7] || 0, used: row[8] || 0, left: row[9] || 0 },
+        unpaid: row[10] || 0
+      };
+    }
+  }
+
+  return { status: "error", message: "Quota not found" };
+}
+
+function doCheckin(data) {
+  requireFields(data, ["name", "type", "date", "time"]);
+  const sheet = getSheet(SHEETS.checkins);
+  const dateKey = normalizeDateKey(data.date);
+  const dateObj = parseDate(dateKey || data.date) || new Date();
+  const day = thaiDayName(dateObj);
+  const isHoliday = checkHoliday(dateKey);
+
+  writeDataRow(sheet, "วันที่", [
+    toDisplayDate(dateKey),
+    clean(data.name),
+    clean(data.type),
+    clean(data.time),
+    day,
+    isHoliday ? "วันหยุดนักขัตฤกษ์" : "วันธรรมดา",
+    clean(data.note)
+  ]);
+
+  return { status: "ok" };
+}
+
+function doLeave(data) {
+  requireFields(data, ["name", "type", "date"]);
+  const sheet = getSheet(SHEETS.leaves);
+  const today = Utilities.formatDate(new Date(), TIMEZONE, "dd/MM/yyyy");
+  const start = toDisplayDate(data.date);
+  const end = toDisplayDate(data.endDate || data.date);
+  const days = Number(data.days) || 1;
+
+  writeDataRow(sheet, "วันที่ยื่น", [
+    today,
+    clean(data.name),
+    clean(data.type),
+    start,
+    end,
+    days,
+    clean(data.reason),
+    "รออนุมัติ"
+  ]);
+
+  return { status: "ok" };
+}
+
+function doCancelLeave(data) {
+  const row = Number(data.row);
+  if (!row) throw new Error("Missing leave row");
+  const sheet = getSheet(SHEETS.leaves);
+  const table = getTable(sheet, "วันที่ยื่น");
+  if (row <= table.headerRow) throw new Error("Invalid leave row");
+  if (clean(sheet.getRange(row, 2).getValue()) !== clean(data.name)) throw new Error("Employee name does not match row");
+  sheet.getRange(row, 8).setValue("ยกเลิก");
+  return { status: "ok" };
+}
+
+function doOT(data) {
+  requireFields(data, ["name", "date", "start", "end"]);
+  const sheet = getSheet(SHEETS.ot);
+  const hours = Number(data.hours) || calculateHours(data.start, data.end);
+  const rate = Number(data.rate) || getEmployeeOtRate(data.name);
+  if (!rate) throw new Error("Missing OT rate for employee: " + clean(data.name));
+  const dateKey = normalizeDateKey(data.date);
+  const isHoliday = checkHoliday(dateKey);
+
+  writeDataRow(sheet, "วันที่", [
+    toDisplayDate(dateKey),
+    clean(data.name),
+    clean(data.start),
+    clean(data.end),
+    hours,
+    rate,
+    hours * rate,
+    isHoliday ? "วันหยุดนักขัตฤกษ์" : "วันธรรมดา",
+    "รออนุมัติ"
+  ]);
+
+  return { status: "ok" };
+}
+
+function doCancelOT(data) {
+  const row = Number(data.row);
+  if (!row) throw new Error("Missing OT row");
+  const sheet = getSheet(SHEETS.ot);
+  const table = getTable(sheet, "วันที่");
+  if (row <= table.headerRow) throw new Error("Invalid OT row");
+  if (clean(sheet.getRange(row, 2).getValue()) !== clean(data.name)) throw new Error("Employee name does not match row");
+  sheet.getRange(row, 9).setValue("ยกเลิก");
+  return { status: "ok" };
+}
+
+function checkHoliday(dateValue) {
+  const target = normalizeDateKey(dateValue);
+  if (!target) return false;
+  const data = getHolidaysData().items;
+  return data.some(item => item.date === target);
+}
+
+function getNameByUserId(userId) {
+  const target = clean(userId);
+  if (!target) return "";
+  const employees = getEmployeesData().employees;
+  const match = employees.filter(emp => String(emp.userId) === target)[0];
+  return match ? match.name : "";
+}
+
+function getEmployeeOtRate(name) {
+  const target = clean(name);
+  if (!target) return 0;
+  const employees = getEmployeesData().employees;
+  const match = employees.filter(emp => emp.name === target)[0];
+  return match ? Number(match.otRate) || 0 : 0;
+}
+
+function getSs() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+function getSheet(name) {
+  const sheet = getSs().getSheetByName(name);
+  if (!sheet) throw new Error("Sheet not found: " + name);
+  return sheet;
+}
+
+function getTable(sheet, firstHeaderText) {
+  const values = sheet.getDataRange().getValues();
+  const headerIndex = findRow(values, firstHeaderText, 0);
+  if (headerIndex < 0) throw new Error("Header not found: " + firstHeaderText + " in " + sheet.getName());
+
+  const rows = [];
+  for (let r = headerIndex + 1; r < values.length; r++) {
+    const row = values[r];
+    const first = clean(row[0]);
+    if (first.indexOf("💡") === 0 || first.indexOf("📋") === 0) break;
+    if (isEmptyRow(row)) continue;
+    rows.push(row);
+  }
+
+  return { headerRow: headerIndex + 1, rows };
+}
+
+function writeDataRow(sheet, firstHeaderText, values) {
+  const all = sheet.getDataRange().getValues();
+  const headerIndex = findRow(all, firstHeaderText, 0);
+  if (headerIndex < 0) throw new Error("Header not found: " + firstHeaderText + " in " + sheet.getName());
+
+  let targetRow = all.length + 1;
+  for (let r = headerIndex + 1; r < all.length; r++) {
+    const first = clean(all[r][0]);
+    if (isEmptyRow(all[r])) {
+      targetRow = r + 1;
+      break;
+    }
+    if (first.indexOf("💡") === 0 || first.indexOf("📋") === 0) {
+      targetRow = r + 1;
+      sheet.insertRowBefore(targetRow);
+      break;
+    }
+  }
+
+  sheet.getRange(targetRow, 1, 1, values.length).setValues([values]);
+}
+
+function findRow(values, firstCellText, col, startIndex) {
+  const start = startIndex || 0;
+  for (let r = start; r < values.length; r++) {
+    if (clean(values[r][col]) === firstCellText) return r;
+  }
+  return -1;
+}
+
+function parseBody(e) {
+  if (!e || !e.postData || !e.postData.contents) return {};
+  return JSON.parse(e.postData.contents);
+}
+
+function jsonOutput(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function output(params, data) {
+  const callback = clean(params.callback);
+  if (!callback) return jsonOutput(data);
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callback)) {
+    return jsonOutput({ status: "error", message: "Invalid callback" });
+  }
+  return ContentService
+    .createTextOutput(callback + "(" + JSON.stringify(data) + ");")
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function requireFields(data, fields) {
+  fields.forEach(field => {
+    if (!clean(data[field])) throw new Error("Missing field: " + field);
+  });
+}
+
+function assertAuthorized(data) {
+  if (clean(data && data.token) !== APP_SECRET) {
+    throw new Error("Unauthorized");
+  }
+}
+
+function clean(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function isEmptyRow(row) {
+  return row.every(cell => clean(cell) === "");
+}
+
+function parseDate(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) return value;
+  const text = clean(value);
+  if (!text) return null;
+
+  let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+
+  match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+
+  return null;
+}
+
+function normalizeDateKey(value) {
+  const date = parseDate(value);
+  if (!date) return "";
+  return Utilities.formatDate(date, TIMEZONE, "yyyy-MM-dd");
+}
+
+function toDisplayDate(value) {
+  const date = parseDate(value);
+  if (!date) return clean(value);
+  return Utilities.formatDate(date, TIMEZONE, "dd/MM/yyyy");
+}
+
+function thaiDayName(date) {
+  const names = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
+  return names[date.getDay()];
+}
+
+function calculateHours(start, end) {
+  const s = clean(start).split(":").map(Number);
+  const e = clean(end).split(":").map(Number);
+  if (s.length < 2 || e.length < 2) return 0;
+  return Math.round(((e[0] * 60 + e[1]) - (s[0] * 60 + s[1])) / 60 * 10) / 10;
+}
+
+function parseShiftTimes(values) {
+  const shiftTimes = {};
+  values.forEach(row => {
+    row.forEach(cell => {
+      const text = clean(cell);
+      if (!text) return;
+      const matches = text.match(/กะ\s*(\d+)\s*=\s*([0-9:.]+)\s*[-–]\s*([0-9:.]+)/g);
+      if (!matches) return;
+      matches.forEach(match => {
+        const parts = match.match(/กะ\s*(\d+)\s*=\s*([0-9:.]+)\s*[-–]\s*([0-9:.]+)/);
+        if (parts) shiftTimes["กะ " + parts[1]] = parts[2].replace(".", ":") + "–" + parts[3].replace(".", ":");
+      });
+    });
+  });
+  return shiftTimes;
+}
+
+function autoFillSchedule() {
+  const sheet = getSheet(SHEETS.schedule);
+  const employees = getEmployeesData().employees;
+  const positions = getScheduleData().positions;
+  if (!positions.length) throw new Error("No positions found in schedule sheet");
+  const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
+  const now = new Date();
+  const weeks = Math.floor(now.getTime() / (7 * 24 * 3600 * 1000));
+  const rotation = Math.floor(weeks / 2) % positions.length;
+
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const weekStr = Utilities.formatDate(monday, TIMEZONE, "dd/MM") + " - " + Utilities.formatDate(sunday, TIMEZONE, "dd/MM/yyyy");
+
+  sheet.getRange("B4").setValue(weekStr);
+  sheet.getRange("B12").setValue(weekStr);
+
+  employees.forEach((emp, idx) => {
+    sheet.getRange(5 + idx, 1).setValue(emp.name);
+    sheet.getRange(13 + idx, 1).setValue(emp.name);
+    const shift = ((Math.floor(weeks / 2) + idx) % 2) + 1;
+    const position = positions[(idx + rotation) % positions.length];
+
+    days.forEach((dayName, dayIndex) => {
+      const isOff = emp.dayOff && emp.dayOff.indexOf(dayName) !== -1;
+      sheet.getRange(5 + idx, 2 + dayIndex).setValue(isOff ? "หยุด" : "กะ " + shift);
+      sheet.getRange(13 + idx, 2 + dayIndex).setValue(isOff ? "-" : position);
+    });
+  });
+
+  return { status: "ok" };
+}
+
+function setAllTriggers() {
+  ScriptApp.getProjectTriggers().forEach(trigger => ScriptApp.deleteTrigger(trigger));
+  ScriptApp.newTrigger("autoFillSchedule")
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(6)
+    .create();
+}
