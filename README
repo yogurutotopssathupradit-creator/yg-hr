@@ -8,7 +8,7 @@ Web app:
 https://yogurutotopssathupradit-creator.github.io/yg-hr/
 
 Google Sheet:
-https://docs.google.com/spreadsheets/d/1IOAqxlOhbJrESNDzdkE5yd44sDGPJy9yD_u6UbOkCXE/edit?gid=463698880#gid=463698880
+https://docs.google.com/spreadsheets/d/1P9Hl80PDTMGWq0s5ztlVGp4pAWE4EdFs1qHLXwwa8og/edit?usp=sharing
 
 Apps Script Web App:
 https://script.google.com/macros/s/AKfycbxPwTQW5BL9yMZhbkCfe_br1CPU6mjBiw1nJ-1N3v6H1rDAlW1-0kEoEA32K9ohwIkcMg/exec
@@ -33,17 +33,37 @@ Saved in the "เช็คอิน-เอาท์" tab.
 
 Leave requests:
 Saved in the "ลางาน" tab.
+New requests are inserted at the top of the request table, newest first.
 Admin can change the status in the sheet.
+The submitted date includes the time, so requests can be sorted by when staff sent them.
+When status is "อนุมัติ", the yearly leave quota tab is updated automatically.
+If admin changes it back to "รออนุมัติ", "ไม่อนุมัติ", or "ยกเลิก", the quota is recalculated and restored.
+The "โควต้า(วัน)" columns stay as the yearly allowance.
+The "ใช้ไป" and "คงเหลือ" columns are the numbers that update.
 
 OT requests:
 Saved in the "โอที" tab.
+New requests are inserted at the top of the request table, newest first.
 Admin can change the status in the sheet.
+The "เวลาที่ยื่น" column shows when staff sent the OT request.
 
 Schedule:
 Edit the "ตารางกะ" tab.
+The web app only shows schedule data. Do not edit schedule settings from the web app.
+To lock one staff member to a position or shift, edit these columns in the "พนักงาน" tab:
+- "ตำแหน่งหลัก"
+- "กะหลัก"
+
+Leave those cells blank, or type "หมุนเวียน", to let the system rotate automatically.
 
 Public holidays:
 Edit the "วันหยุดนักขัตฤกษ์" tab.
+
+Monthly salary summary:
+Saved in the "สรุปเงินเดือน" tab.
+Apps Script updates it automatically on the 28th of every month.
+The app calculates work days, approved leave, unpaid leave, holiday work, OT, normal pay, special holiday pay, and net total.
+"เบี้ยขยัน" and "Incentive" are not auto-calculated. Admin can fill those in manually, and the next salary sync keeps those values.
 
 
 Important rules
@@ -88,6 +108,21 @@ Who has access:
 Anyone
 
 The Google Sheet itself can remain private. Apps Script is the public gate that the web app uses.
+
+
+Automatic jobs
+
+After deploying Apps Script, run this function once in Apps Script:
+setAllTriggers
+
+You do not need to manually run the quota sync after approving leave.
+When admin edits the "ลางาน" tab, the quota is recalculated automatically.
+
+This creates:
+- weekly schedule auto-fill
+- leave quota sync every 10 minutes
+- leave quota sync when the sheet is edited
+- salary summary on the 28th of every month
 
 
 Security note

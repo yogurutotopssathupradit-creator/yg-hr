@@ -6,6 +6,7 @@
 const SPREADSHEET_ID = "1P9Hl80PDTMGWq0s5ztlVGp4pAWE4EdFs1qHLXwwa8og";
 const TIMEZONE = "Asia/Bangkok";
 const APP_SECRET = "yg_hr_2026_h7m4Q9vT2kP8sR6n";
+const THAI_MONTH_NAMES = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
 const SHEETS = {
   employees: "พนักงาน",
@@ -14,7 +15,8 @@ const SHEETS = {
   leaves: "ลางาน",
   ot: "โอที",
   holidays: "วันหยุดนักขัตฤกษ์",
-  quota: "โควต้าการลา"
+  quota: "โควต้าการลา",
+  salary: "สรุปเงินเดือน"
 };
 
 function doGet(e) {
@@ -31,6 +33,8 @@ function doGet(e) {
     if (action === "getSchedule") return output(params, getScheduleData());
     if (action === "getHolidays") return output(params, getHolidaysData());
     if (action === "getQuota") return output(params, getQuotaData(params.name, params.userId));
+    if (action === "syncLeaveQuota") return output(params, syncLeaveQuota());
+    if (action === "syncMonthlySalary") return output(params, syncMonthlySalary());
 
     return output(params, { status: "error", message: "Unknown action: " + action });
   } catch (err) {
@@ -50,7 +54,6 @@ function doPost(e) {
     if (action === "cancelLeave") return jsonOutput(doCancelLeave(data));
     if (action === "ot") return jsonOutput(doOT(data));
     if (action === "cancelOT") return jsonOutput(doCancelOT(data));
-
     return jsonOutput({ status: "error", message: "Unknown action: " + action });
   } catch (err) {
     return jsonOutput({ status: "error", message: String(err && err.message ? err.message : err) });
@@ -62,6 +65,7 @@ function getEmployeesData() {
   const values = sheet.getDataRange().getValues();
   const headerIndex = findRow(values, "รหัส", 0);
   if (headerIndex < 0) throw new Error("Header not found: รหัส in " + sheet.getName());
+  const headers = getHeaderMap(values[headerIndex]);
   const employees = [];
 
   values.slice(headerIndex + 1).forEach(row => {
@@ -80,7 +84,9 @@ function getEmployeesData() {
         otRate: Number(row[6]) || 0,
         dayOff: clean(row[7]),
         userId: clean(row[8]),
-        note: clean(row[9])
+        note: clean(row[9]),
+        fixedPosition: clean(row[headers["ตำแหน่งหลัก"]]),
+        fixedShift: clean(row[headers["กะหลัก"]])
       });
     }
   });
@@ -90,7 +96,7 @@ function getEmployeesData() {
 
 function getLeavesData() {
   const sheet = getSheet(SHEETS.leaves);
-  const table = getTable(sheet, "วันที่ยื่น");
+  const table = getFlexibleTable(sheet, "วันที่ยื่น");
   const leaves = {};
   const items = [];
 
@@ -105,7 +111,7 @@ function getLeavesData() {
 
     items.push({
       row: table.headerRow + 1 + index,
-      submitted: toDisplayDate(row[0]),
+      submitted: toDisplayDateTime(row[0]),
       name,
       type: clean(row[2]),
       date: startDate,
@@ -124,7 +130,7 @@ function getMyLeavesData(name) {
   if (!target) return { status: "ok", leaves: [] };
 
   const sheet = getSheet(SHEETS.leaves);
-  const table = getTable(sheet, "วันที่ยื่น");
+  const table = getFlexibleTable(sheet, "วันที่ยื่น");
   const leaves = [];
 
   table.rows.forEach((row, index) => {
@@ -133,7 +139,7 @@ function getMyLeavesData(name) {
     if (status === "ยกเลิก") return;
     leaves.push({
       row: table.headerRow + 1 + index,
-      submitted: toDisplayDate(row[0]),
+      submitted: toDisplayDateTime(row[0]),
       name: clean(row[1]),
       type: clean(row[2]),
       date: normalizeDateKey(row[3]) || toDisplayDate(row[3]),
@@ -144,7 +150,7 @@ function getMyLeavesData(name) {
     });
   });
 
-  leaves.reverse();
+  leaves.sort((a, b) => (parseDateTimeValue(b.submitted) || 0) - (parseDateTimeValue(a.submitted) || 0));
   return { status: "ok", leaves };
 }
 
@@ -153,7 +159,8 @@ function getMyOTData(name) {
   if (!target) return { status: "ok", ots: [] };
 
   const sheet = getSheet(SHEETS.ot);
-  const table = getTable(sheet, "วันที่");
+  const table = getFlexibleTable(sheet, "วันที่");
+  const headers = getHeaderMap(sheet.getRange(table.headerRow, 1, 1, sheet.getLastColumn()).getValues()[0]);
   const ots = [];
 
   table.rows.forEach((row, index) => {
@@ -162,19 +169,20 @@ function getMyOTData(name) {
     if (status === "ยกเลิก") return;
     ots.push({
       row: table.headerRow + 1 + index,
-      date: normalizeDateKey(row[0]) || toDisplayDate(row[0]),
+      date: toDisplayDate(row[0]),
       name: clean(row[1]),
-      start: clean(row[2]),
-      end: clean(row[3]),
+      start: toDisplayTime(row[2]),
+      end: toDisplayTime(row[3]),
       hours: Number(row[4]) || 0,
       rate: Number(row[5]) || 0,
       total: Number(row[6]) || 0,
       dayStatus: clean(row[7]),
-      status
+      status,
+      submitted: toDisplayDateTime(row[headers["เวลาที่ยื่น"]])
     });
   });
 
-  ots.reverse();
+  ots.sort((a, b) => (parseDateTimeValue(b.submitted) || 0) - (parseDateTimeValue(a.submitted) || 0));
   return { status: "ok", ots };
 }
 
@@ -184,17 +192,19 @@ function getScheduleData() {
   const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
   const shiftHeader = findRow(values, "พนักงาน", 0);
   const positionHeader = findRow(values, "พนักงาน", 0, shiftHeader + 1);
-  const week = shiftHeader > 0 ? clean(values[shiftHeader][1]) : "";
+  const week = getScheduleWeek(values, shiftHeader);
   const shifts = [];
   const shiftTimes = parseShiftTimes(values);
   const positions = [];
+  const employeeNames = getEmployeesData().names;
 
   if (shiftHeader < 0) return { status: "ok", week: "", days, shifts, shiftTimes, positions };
 
   for (let r = shiftHeader + 1; r < values.length; r++) {
+    if (positionHeader > -1 && r >= positionHeader) break;
     const name = clean(values[r][0]);
     if (!name || name.indexOf("💡") === 0 || name === "สัปดาห์ที่:") continue;
-    if (positionHeader > -1 && r >= positionHeader) break;
+    if (employeeNames.indexOf(name) === -1) continue;
 
     const item = { name, days: {} };
     days.forEach((day, idx) => {
@@ -207,6 +217,7 @@ function getScheduleData() {
     for (let r = positionHeader + 1; r < values.length; r++) {
       const name = clean(values[r][0]);
       if (!name || name.indexOf("💡") === 0 || name === "สัปดาห์ที่:") continue;
+      if (employeeNames.indexOf(name) === -1) continue;
       const item = shifts.filter(s => s.name === name)[0];
       if (!item) continue;
       days.forEach((day, idx) => {
@@ -242,12 +253,23 @@ function getHolidaysData() {
   return { status: "ok", holidays, items };
 }
 
+function getScheduleWeek(values, shiftHeader) {
+  if (shiftHeader < 0) return "";
+  for (let r = shiftHeader + 1; r < values.length; r++) {
+    const first = clean(values[r][0]);
+    if (first === "สัปดาห์ที่:") return clean(values[r][1]);
+    if (first && first !== "สัปดาห์ที่:" && first.indexOf("💡") !== 0) continue;
+  }
+  return "";
+}
+
 function getQuotaData(name, userId) {
   const targetName = clean(name) || getNameByUserId(userId);
   if (!targetName) return { status: "error", message: "Employee not found" };
 
+  syncLeaveQuota();
   const sheet = getSheet(SHEETS.quota);
-  const table = getTable(sheet, "ชื่อ");
+  const table = getFlexibleTable(sheet, "ชื่อ");
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
     if (clean(row[0]) === targetName) {
@@ -289,13 +311,13 @@ function doCheckin(data) {
 function doLeave(data) {
   requireFields(data, ["name", "type", "date"]);
   const sheet = getSheet(SHEETS.leaves);
-  const today = Utilities.formatDate(new Date(), TIMEZONE, "dd/MM/yyyy");
+  const submittedAt = Utilities.formatDate(new Date(), TIMEZONE, "dd/MM/yyyy HH:mm:ss");
   const start = toDisplayDate(data.date);
   const end = toDisplayDate(data.endDate || data.date);
   const days = Number(data.days) || 1;
 
-  writeDataRow(sheet, "วันที่ยื่น", [
-    today,
+  const row = writeDataRowAtTop(sheet, "วันที่ยื่น", [
+    submittedAt,
     clean(data.name),
     clean(data.type),
     start,
@@ -304,6 +326,7 @@ function doLeave(data) {
     clean(data.reason),
     "รออนุมัติ"
   ]);
+  applyValidationFromNearbyRow(sheet, row, 8);
 
   return { status: "ok" };
 }
@@ -312,23 +335,274 @@ function doCancelLeave(data) {
   const row = Number(data.row);
   if (!row) throw new Error("Missing leave row");
   const sheet = getSheet(SHEETS.leaves);
-  const table = getTable(sheet, "วันที่ยื่น");
+  const table = getFlexibleTable(sheet, "วันที่ยื่น");
   if (row <= table.headerRow) throw new Error("Invalid leave row");
   if (clean(sheet.getRange(row, 2).getValue()) !== clean(data.name)) throw new Error("Employee name does not match row");
   sheet.getRange(row, 8).setValue("ยกเลิก");
+  syncLeaveQuota();
   return { status: "ok" };
+}
+
+function syncLeaveQuota(ss) {
+  const approved = calculateApprovedLeaveUsage(ss);
+  const sheet = getSheet(SHEETS.quota, ss);
+  const table = getFlexibleTable(sheet, "ชื่อ");
+
+  table.rows.forEach((row, index) => {
+    const name = clean(row[0]);
+    if (!name || name.indexOf("📋") === 0 || name.indexOf("💡") === 0) return;
+    const usage = approved[name] || {};
+    const sheetRow = table.headerRow + 1 + index;
+
+    const sickUsed = Number(usage["ลาป่วย"]) || 0;
+    const businessUsed = Number(usage["ลากิจ"]) || 0;
+    const vacationUsed = Number(usage["ลาพักร้อน"]) || 0;
+    const unpaidUsed = Number(usage["ลาไม่รับเงิน"]) || 0;
+
+    sheet.getRange(sheetRow, 3).setValue(sickUsed);
+    sheet.getRange(sheetRow, 4).setValue(Math.max((Number(row[1]) || 0) - sickUsed, 0));
+    sheet.getRange(sheetRow, 6).setValue(businessUsed);
+    sheet.getRange(sheetRow, 7).setValue(Math.max((Number(row[4]) || 0) - businessUsed, 0));
+    sheet.getRange(sheetRow, 9).setValue(vacationUsed);
+    sheet.getRange(sheetRow, 10).setValue(Math.max((Number(row[7]) || 0) - vacationUsed, 0));
+    sheet.getRange(sheetRow, 11).setValue(unpaidUsed);
+  });
+
+  return { status: "ok" };
+}
+
+function handleSheetEdit(e) {
+  syncLeaveQuotaFromEdit(e);
+}
+
+function onEdit(e) {
+  syncLeaveQuotaFromEdit(e);
+}
+
+function syncLeaveQuotaFromEdit(e) {
+  try {
+    const sheet = e && e.range && e.range.getSheet ? e.range.getSheet() : null;
+    if (!sheet) return;
+    if (sheet.getName() === SHEETS.leaves) syncLeaveQuota(e.source);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function syncMonthlySalary(targetDate, ss) {
+  const date = targetDate || new Date();
+  const period = getMonthPeriod(date);
+  const employees = getEmployeesData().employees;
+  const checkins = calculateMonthlyCheckins(period.start, period.end, ss);
+  const leaves = calculateMonthlyLeaveSummary(period.start, period.end, ss);
+  const ot = calculateMonthlyOtSummary(period.start, period.end, ss);
+  const currentManual = getCurrentSalaryManualValues(ss);
+  const sheet = getSheet(SHEETS.salary, ss);
+  const table = getFlexibleTable(sheet, "ชื่อ");
+  const rows = [];
+  const totals = {
+    salary: 0,
+    workDays: 0,
+    paidLeave: 0,
+    unpaidLeave: 0,
+    normalPay: 0,
+    holidayWorked: 0,
+    holidayExtra: 0,
+    ot: 0,
+    diligence: 0,
+    incentive: 0,
+    net: 0
+  };
+
+  employees.forEach(emp => {
+    const salary = parseMoney(emp.salary);
+    const dailyRate = salary / 30;
+    const name = emp.name;
+    const workDays = Number((checkins[name] && checkins[name].workDays) || 0);
+    const holidayWorked = Number((checkins[name] && checkins[name].holidayWorked) || 0);
+    const paidLeave = Number((leaves[name] && leaves[name].paid) || 0);
+    const unpaidLeave = Number((leaves[name] && leaves[name].unpaid) || 0);
+    const otTotal = Number((ot[name] && ot[name].total) || 0);
+    const manual = currentManual[name] || {};
+    const diligence = Number(manual.diligence) || 0;
+    const incentive = Number(manual.incentive) || 0;
+    const normalPay = Math.max(Math.round((dailyRate * workDays) - (unpaidLeave * 400)), 0);
+    const holidayExtra = holidayWorked * 200;
+    const net = normalPay + holidayExtra + otTotal + diligence + incentive;
+
+    totals.salary += salary;
+    totals.workDays += workDays;
+    totals.paidLeave += paidLeave;
+    totals.unpaidLeave += unpaidLeave;
+    totals.normalPay += normalPay;
+    totals.holidayWorked += holidayWorked;
+    totals.holidayExtra += holidayExtra;
+    totals.ot += otTotal;
+    totals.diligence += diligence;
+    totals.incentive += incentive;
+    totals.net += net;
+
+    rows.push([
+      name,
+      salary,
+      workDays,
+      paidLeave,
+      unpaidLeave,
+      normalPay,
+      holidayWorked,
+      holidayExtra,
+      otTotal,
+      diligence,
+      incentive,
+      net
+    ]);
+  });
+
+  rows.push([
+    "รวมทั้งหมด",
+    totals.salary,
+    totals.workDays,
+    totals.paidLeave,
+    totals.unpaidLeave,
+    totals.normalPay,
+    totals.holidayWorked,
+    totals.holidayExtra,
+    totals.ot,
+    totals.diligence,
+    totals.incentive,
+    totals.net
+  ]);
+
+  sheet.getRange(table.headerRow, 2).setValue(period.label + " เงินเดือนฐาน");
+  ensureSalaryRows(sheet, table, rows.length);
+  sheet.getRange(table.headerRow + 1, 1, rows.length, 12).setValues(rows);
+  return { status: "ok", month: period.label, rows: rows.length };
+}
+
+function calculateMonthlyCheckins(start, end, ss) {
+  const sheet = getSheet(SHEETS.checkins, ss);
+  const table = getFlexibleTable(sheet, "วันที่");
+  const byName = {};
+  table.rows.forEach(row => {
+    const dateKey = normalizeDateKey(row[0]);
+    if (!dateKey || dateKey < start || dateKey > end) return;
+    if (clean(row[2]) !== "เช็คอิน") return;
+    const name = clean(row[1]);
+    if (!name) return;
+    if (!byName[name]) byName[name] = { dates: {}, holidayDates: {} };
+    byName[name].dates[dateKey] = true;
+    if (checkHoliday(dateKey)) byName[name].holidayDates[dateKey] = true;
+  });
+
+  const summary = {};
+  Object.keys(byName).forEach(name => {
+    summary[name] = {
+      workDays: Object.keys(byName[name].dates).length,
+      holidayWorked: Object.keys(byName[name].holidayDates).length
+    };
+  });
+  return summary;
+}
+
+function calculateMonthlyLeaveSummary(start, end, ss) {
+  const sheet = getSheet(SHEETS.leaves, ss);
+  const table = getFlexibleTable(sheet, "วันที่ยื่น");
+  const summary = {};
+  table.rows.forEach(row => {
+    const name = clean(row[1]);
+    const type = clean(row[2]);
+    const dateKey = normalizeDateKey(row[3]);
+    const status = clean(row[7]);
+    if (!name || status !== "อนุมัติ" || !dateKey || dateKey < start || dateKey > end) return;
+    if (!summary[name]) summary[name] = { paid: 0, unpaid: 0 };
+    const days = Number(row[5]) || 1;
+    if (type === "ลาไม่รับเงิน") summary[name].unpaid += days;
+    else summary[name].paid += days;
+  });
+  return summary;
+}
+
+function calculateMonthlyOtSummary(start, end, ss) {
+  const sheet = getSheet(SHEETS.ot, ss);
+  const table = getFlexibleTable(sheet, "วันที่");
+  const summary = {};
+  table.rows.forEach(row => {
+    const name = clean(row[1]);
+    const dateKey = normalizeDateKey(row[0]);
+    const status = clean(row[8]);
+    if (!name || status !== "อนุมัติ" || !dateKey || dateKey < start || dateKey > end) return;
+    if (!summary[name]) summary[name] = { total: 0 };
+    summary[name].total += Number(row[6]) || 0;
+  });
+  return summary;
+}
+
+function getCurrentSalaryManualValues(ss) {
+  const sheet = getSheet(SHEETS.salary, ss);
+  const table = getFlexibleTable(sheet, "ชื่อ");
+  const values = {};
+  table.rows.forEach(row => {
+    const name = clean(row[0]);
+    if (!name) return;
+    values[name] = {
+      diligence: parseMoney(row[9]),
+      incentive: parseMoney(row[10])
+    };
+  });
+  return values;
+}
+
+function ensureSalaryRows(sheet, table, neededRows) {
+  const existingRows = table.rows.length;
+  const firstNoteRow = table.headerRow + 1 + existingRows;
+  if (existingRows < neededRows) {
+    sheet.insertRowsBefore(firstNoteRow, neededRows - existingRows);
+  }
+  if (existingRows > neededRows) {
+    sheet.getRange(table.headerRow + 1 + neededRows, 1, existingRows - neededRows, 12).clearContent();
+  }
+}
+
+function getMonthPeriod(date) {
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return {
+    start: Utilities.formatDate(monthStart, TIMEZONE, "yyyy-MM-dd"),
+    end: Utilities.formatDate(monthEnd, TIMEZONE, "yyyy-MM-dd"),
+    label: THAI_MONTH_NAMES[date.getMonth()] + " " + (date.getFullYear() + 543)
+  };
+}
+
+function calculateApprovedLeaveUsage(ss) {
+  const sheet = getSheet(SHEETS.leaves, ss);
+  const table = getFlexibleTable(sheet, "วันที่ยื่น");
+  const usage = {};
+
+  table.rows.forEach(row => {
+    const name = clean(row[1]);
+    const type = clean(row[2]);
+    const days = Number(row[5]) || 1;
+    const status = clean(row[7]);
+    if (!name || !type || status !== "อนุมัติ") return;
+    if (!usage[name]) usage[name] = {};
+    usage[name][type] = (Number(usage[name][type]) || 0) + days;
+  });
+
+  return usage;
 }
 
 function doOT(data) {
   requireFields(data, ["name", "date", "start", "end"]);
   const sheet = getSheet(SHEETS.ot);
+  ensureTableHeaderColumn(sheet, "วันที่", "เวลาที่ยื่น");
   const hours = Number(data.hours) || calculateHours(data.start, data.end);
   const rate = Number(data.rate) || getEmployeeOtRate(data.name);
   if (!rate) throw new Error("Missing OT rate for employee: " + clean(data.name));
   const dateKey = normalizeDateKey(data.date);
   const isHoliday = checkHoliday(dateKey);
+  const submittedAt = Utilities.formatDate(new Date(), TIMEZONE, "dd/MM/yyyy HH:mm:ss");
 
-  writeDataRow(sheet, "วันที่", [
+  const row = writeDataRowAtTop(sheet, "วันที่", [
     toDisplayDate(dateKey),
     clean(data.name),
     clean(data.start),
@@ -337,8 +611,10 @@ function doOT(data) {
     rate,
     hours * rate,
     isHoliday ? "วันหยุดนักขัตฤกษ์" : "วันธรรมดา",
-    "รออนุมัติ"
+    "รออนุมัติ",
+    submittedAt
   ]);
+  applyValidationFromNearbyRow(sheet, row, 9);
 
   return { status: "ok" };
 }
@@ -347,7 +623,7 @@ function doCancelOT(data) {
   const row = Number(data.row);
   if (!row) throw new Error("Missing OT row");
   const sheet = getSheet(SHEETS.ot);
-  const table = getTable(sheet, "วันที่");
+  const table = getFlexibleTable(sheet, "วันที่");
   if (row <= table.headerRow) throw new Error("Invalid OT row");
   if (clean(sheet.getRange(row, 2).getValue()) !== clean(data.name)) throw new Error("Employee name does not match row");
   sheet.getRange(row, 9).setValue("ยกเลิก");
@@ -377,12 +653,27 @@ function getEmployeeOtRate(name) {
   return match ? Number(match.otRate) || 0 : 0;
 }
 
+function getHeaderMap(row) {
+  const headers = {};
+  row.forEach((cell, idx) => {
+    const header = clean(cell);
+    if (header) headers[header] = idx;
+  });
+  return headers;
+}
+
+function normalizeRotateValue(value) {
+  const text = clean(value).replace(/^Fix:\s*/i, "");
+  if (!text || text === "หมุนเวียน" || text === "ค่าเดิมระบบ") return "";
+  return text;
+}
+
 function getSs() {
   return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
 
-function getSheet(name) {
-  const sheet = getSs().getSheetByName(name);
+function getSheet(name, ss) {
+  const sheet = (ss || getSs()).getSheetByName(name);
   if (!sheet) throw new Error("Sheet not found: " + name);
   return sheet;
 }
@@ -404,9 +695,42 @@ function getTable(sheet, firstHeaderText) {
   return { headerRow: headerIndex + 1, rows };
 }
 
+function getFlexibleTable(sheet, firstHeaderText) {
+  const values = sheet.getDataRange().getValues();
+  const target = clean(firstHeaderText);
+  let headerIndex = -1;
+  for (let r = 0; r < values.length; r++) {
+    if (clean(values[r][0]) === target) {
+      headerIndex = r;
+      break;
+    }
+  }
+  if (headerIndex < 0) {
+    for (let r = 0; r < values.length; r++) {
+      if (clean(values[r][0]).indexOf(target) !== -1) {
+        headerIndex = r;
+        break;
+      }
+    }
+  }
+  if (headerIndex < 0) throw new Error("Header not found: " + firstHeaderText + " in " + sheet.getName());
+
+  const rows = [];
+  for (let r = headerIndex + 1; r < values.length; r++) {
+    const row = values[r];
+    const first = clean(row[0]);
+    if (first.indexOf("💡") === 0 || first.indexOf("📋") === 0) break;
+    if (isEmptyRow(row)) continue;
+    rows.push(row);
+  }
+
+  return { headerRow: headerIndex + 1, rows };
+}
+
 function writeDataRow(sheet, firstHeaderText, values) {
   const all = sheet.getDataRange().getValues();
-  const headerIndex = findRow(all, firstHeaderText, 0);
+  let headerIndex = findRow(all, firstHeaderText, 0);
+  if (headerIndex < 0) headerIndex = getFlexibleTable(sheet, firstHeaderText).headerRow - 1;
   if (headerIndex < 0) throw new Error("Header not found: " + firstHeaderText + " in " + sheet.getName());
 
   let targetRow = all.length + 1;
@@ -424,6 +748,52 @@ function writeDataRow(sheet, firstHeaderText, values) {
   }
 
   sheet.getRange(targetRow, 1, 1, values.length).setValues([values]);
+  return targetRow;
+}
+
+function writeDataRowAtTop(sheet, firstHeaderText, values) {
+  const table = getFlexibleTable(sheet, firstHeaderText);
+  const targetRow = table.headerRow + 1;
+  sheet.insertRowBefore(targetRow);
+  sheet.getRange(targetRow, 1, 1, values.length).setValues([values]);
+  return targetRow;
+}
+
+function applyValidationFromNearbyRow(sheet, targetRow, col) {
+  const target = sheet.getRange(targetRow, col);
+  if (target.getDataValidation()) return;
+
+  for (let row = targetRow - 1; row >= 1; row--) {
+    const validation = sheet.getRange(row, col).getDataValidation();
+    if (validation) {
+      target.setDataValidation(validation);
+      return;
+    }
+  }
+
+  for (let row = targetRow + 1; row <= sheet.getLastRow(); row++) {
+    const validation = sheet.getRange(row, col).getDataValidation();
+    if (validation) {
+      target.setDataValidation(validation);
+      return;
+    }
+  }
+}
+
+function ensureTableHeaderColumn(sheet, firstHeaderText, headerText) {
+  const table = getFlexibleTable(sheet, firstHeaderText);
+  const headerRange = sheet.getRange(table.headerRow, 1, 1, sheet.getLastColumn());
+  const headers = headerRange.getValues()[0];
+  if (headers.some(cell => clean(cell) === headerText)) return;
+
+  let targetCol = headers.length + 1;
+  for (let i = headers.length - 1; i >= 0; i--) {
+    if (clean(headers[i])) {
+      targetCol = i + 2;
+      break;
+    }
+  }
+  sheet.getRange(table.headerRow, targetCol).setValue(headerText);
 }
 
 function findRow(values, firstCellText, col, startIndex) {
@@ -473,6 +843,10 @@ function clean(value) {
   return String(value).trim();
 }
 
+function parseMoney(value) {
+  return Number(clean(value).replace(/,/g, "")) || 0;
+}
+
 function isEmptyRow(row) {
   return row.every(cell => clean(cell) === "");
 }
@@ -485,8 +859,14 @@ function parseDate(value) {
   let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 
+  match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6]) || 0);
+
   match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (match) return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+
+  match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (match) return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4]), Number(match[5]), Number(match[6]) || 0);
 
   return null;
 }
@@ -501,6 +881,27 @@ function toDisplayDate(value) {
   const date = parseDate(value);
   if (!date) return clean(value);
   return Utilities.formatDate(date, TIMEZONE, "dd/MM/yyyy");
+}
+
+function toDisplayDateTime(value) {
+  const date = parseDate(value);
+  if (!date) return clean(value);
+  return Utilities.formatDate(date, TIMEZONE, "dd/MM/yyyy HH:mm:ss");
+}
+
+function toDisplayTime(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, TIMEZONE, "HH:mm");
+  }
+  const text = clean(value);
+  const match = text.match(/(\d{1,2}):(\d{2})/);
+  if (match) return String(match[1]).padStart(2, "0") + ":" + match[2];
+  return text;
+}
+
+function parseDateTimeValue(value) {
+  const date = parseDate(value);
+  return date ? date.getTime() : 0;
 }
 
 function thaiDayName(date) {
@@ -535,12 +936,16 @@ function parseShiftTimes(values) {
 function autoFillSchedule() {
   const sheet = getSheet(SHEETS.schedule);
   const employees = getEmployeesData().employees;
-  const positions = getScheduleData().positions;
+  const schedule = getScheduleData();
+  const positions = schedule.positions;
+  const shiftOptions = Object.keys(schedule.shiftTimes);
   if (!positions.length) throw new Error("No positions found in schedule sheet");
+  if (!shiftOptions.length) throw new Error("No shift times found in schedule sheet");
   const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
   const now = new Date();
   const weeks = Math.floor(now.getTime() / (7 * 24 * 3600 * 1000));
   const rotation = Math.floor(weeks / 2) % positions.length;
+  const shiftRotation = Math.floor(weeks / 2) % shiftOptions.length;
 
   const day = now.getDay();
   const monday = new Date(now);
@@ -555,12 +960,12 @@ function autoFillSchedule() {
   employees.forEach((emp, idx) => {
     sheet.getRange(5 + idx, 1).setValue(emp.name);
     sheet.getRange(13 + idx, 1).setValue(emp.name);
-    const shift = ((Math.floor(weeks / 2) + idx) % 2) + 1;
-    const position = positions[(idx + rotation) % positions.length];
+    const shift = normalizeRotateValue(emp.fixedShift) || shiftOptions[(idx + shiftRotation) % shiftOptions.length];
+    const position = normalizeRotateValue(emp.fixedPosition) || positions[(idx + rotation) % positions.length];
 
     days.forEach((dayName, dayIndex) => {
       const isOff = emp.dayOff && emp.dayOff.indexOf(dayName) !== -1;
-      sheet.getRange(5 + idx, 2 + dayIndex).setValue(isOff ? "หยุด" : "กะ " + shift);
+      sheet.getRange(5 + idx, 2 + dayIndex).setValue(isOff ? "หยุด" : shift);
       sheet.getRange(13 + idx, 2 + dayIndex).setValue(isOff ? "-" : position);
     });
   });
@@ -574,5 +979,18 @@ function setAllTriggers() {
     .timeBased()
     .onWeekDay(ScriptApp.WeekDay.MONDAY)
     .atHour(6)
+    .create();
+  ScriptApp.newTrigger("syncLeaveQuota")
+    .timeBased()
+    .everyMinutes(10)
+    .create();
+  ScriptApp.newTrigger("syncMonthlySalary")
+    .timeBased()
+    .onMonthDay(28)
+    .atHour(6)
+    .create();
+  ScriptApp.newTrigger("handleSheetEdit")
+    .forSpreadsheet(getSs())
+    .onEdit()
     .create();
 }

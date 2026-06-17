@@ -122,6 +122,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .schedule-name{font-size:15px;font-weight:700;margin-bottom:4px;}
 .schedule-detail{font-size:13px;color:var(--mid);}
 .schedule-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px;background:white;}
+.schedule-config-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:18px;}
+.schedule-config-grid.two{grid-template-columns:1fr;}
+.readonly-label{font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px;}
+.readonly-box{border:1.5px solid #E2E8F0;border-radius:12px;padding:12px 14px;background:var(--light);font-size:15px;font-weight:600;min-height:46px;display:flex;align-items:center;}
+.readonly-section-title{font-size:14px;font-weight:800;color:var(--green);margin:18px 0 12px;}
+.readonly-employee{border-top:1px solid #E2E8F0;padding:14px 0;}
+.readonly-employee:first-child{border-top:none;padding-top:0;}
+.readonly-employee-head{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;margin-bottom:12px;}
+.readonly-number{width:34px;height:34px;border-radius:10px;background:var(--green);color:white;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+@media (min-width:640px){
+  .schedule-config-grid{grid-template-columns:repeat(3,1fr);}
+  .schedule-config-grid.two{grid-template-columns:repeat(2,1fr);}
+}
 
 /* TOAST */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:white;padding:11px 20px;border-radius:28px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.2);transition:transform 0.3s cubic-bezier(.175,.885,.32,1.275);z-index:999;white-space:nowrap;}
@@ -134,11 +147,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .leave-item-type{font-size:13px;font-weight:700;color:var(--dark);}
 .leave-item-date{font-size:11px;color:var(--mid);margin-top:2px;}
 .leave-item-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;}
+.leave-history-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--light);margin-bottom:8px;}
+.leave-history-info{flex:1;min-width:0;}
+.leave-history-type{font-size:13px;font-weight:700;color:var(--dark);line-height:1.25;margin-bottom:3px;}
+.leave-history-date{font-size:11px;color:var(--mid);font-weight:500;line-height:1.35;}
+.leave-history-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0;}
+.leave-history-status{font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
 .status-wait{background:var(--yellow-pale, #FFF8E1);color:#F9A825;}
 .status-ok{background:var(--green-pale);color:var(--green);}
 .status-no{background:var(--red-pale);color:var(--red);}
 .btn-cancel-leave{border:none;background:var(--red-pale);color:var(--red);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .btn-cancel-leave:active{transform:scale(0.96);}
+@media (max-width:380px){
+  .leave-history-item{padding:10px 12px;gap:8px;}
+  .leave-history-actions{gap:6px;}
+  .leave-history-status{font-size:11px;padding:5px 9px;}
+}
 
 
 /* POPUP */
@@ -279,6 +303,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
     <div class="card-label">ตารางกะสัปดาห์นี้</div>
     <div id="scheduleList"><div class="loading">กำลังโหลด...</div></div>
   </div>
+  <div class="card">
+    <div class="card-label">ข้อมูลตั้งค่าตารางกะ</div>
+    <div id="scheduleConfigView"><div class="loading">กำลังโหลด...</div></div>
+  </div>
 </div>
 
 <!-- CALENDAR -->
@@ -322,6 +350,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 const SHEET_URL = "https://script.google.com/macros/s/AKfycby8EFgi0JyfaRE0qODln06SPgnIPIbN_0Kb5TPYbtR7tkNe-vcYQZ3UKge_-0sHlhElKA/exec";
 const APP_SECRET = "yg_hr_2026_h7m4Q9vT2kP8sR6n";
 const SHOP_LAT = 13.687111, SHOP_LNG = 100.532806, RADIUS_M = 150;
+const ALLOW_CHECKIN_OUTSIDE_LOCATION = false; // temporary testing only: set back to false after testing
 
 let HOLIDAYS = {};
 
@@ -386,6 +415,7 @@ async function loadEmployees() {
   populateSelects();
   renderEmployeeLegend();
   renderSchedule();
+  renderScheduleConfigView();
   await loadLeaveData();
 }
 
@@ -409,6 +439,7 @@ async function loadScheduleData() {
     const data = await apiGet('getSchedule');
     scheduleData = data;
     renderSchedule();
+    renderScheduleConfigView();
   } catch(e) {}
 }
 
@@ -416,15 +447,15 @@ function renderNames() {
   const grid = document.getElementById('nameGrid');
   if (!employees.length) { grid.innerHTML = '<div class="empty">ไม่พบข้อมูลพนักงาน</div>'; return; }
   grid.innerHTML = employees.map(name => `
-    <button class="name-btn" onclick="selectEmp('${name}')">
-      <div class="av">${name[0]}</div>
-      <div class="nm">${name}</div>
+    <button class="name-btn" onclick='selectEmp(${JSON.stringify(name)})'>
+      <div class="av">${escapeHtml(name[0] || '')}</div>
+      <div class="nm">${escapeHtml(name)}</div>
     </button>
   `).join('');
 }
 
 function populateSelects() {
-  const opts = employees.map(n => `<option value="${n}">${n}</option>`).join('');
+  const opts = employees.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
   document.getElementById('leaveName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
   document.getElementById('otName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
 }
@@ -440,12 +471,16 @@ function renderEmployeeLegend() {
   const legend = document.getElementById('employeeLegend');
   if (!legend) return;
   legend.innerHTML = employees.map(name => `
-    <div class="legend-item"><div class="legend-dot" style="background:${employeeColors[name] || '#1565C0'}"></div>${name}</div>
+    <div class="legend-item"><div class="legend-dot" style="background:${employeeColors[name] || '#1565C0'}"></div>${escapeHtml(name)}</div>
   `).join('');
 }
 
 // GPS
 function watchGPS() {
+  if (ALLOW_CHECKIN_OUTSIDE_LOCATION) {
+    setGps(true, 'โหมดทดสอบ: อนุญาตให้เช็คอินนอกพื้นที่');
+    return;
+  }
   if (!navigator.geolocation) { setGps(false, 'ไม่รองรับ GPS'); return; }
   navigator.geolocation.watchPosition(
     pos => {
@@ -497,7 +532,7 @@ function updateStatus() {
 
 function updateBtns() {
   const btnIn=document.getElementById('btnIn'),btnOut=document.getElementById('btnOut');
-  if (!selectedEmp||!gpsOk) { btnIn.disabled=true; btnOut.disabled=true; return; }
+  if (!selectedEmp||(!gpsOk && !ALLOW_CHECKIN_OUTSIDE_LOCATION)) { btnIn.disabled=true; btnOut.disabled=true; return; }
   const logs=todayLog.filter(l=>l.name===selectedEmp);
   const last=logs[logs.length-1];
   const checkedIn=last&&last.type==='เช็คอิน';
@@ -506,7 +541,7 @@ function updateBtns() {
 
 async function doCheckin(type) {
   if (!selectedEmp) return toast('เลือกชื่อก่อนนะครับ','err');
-  if (!gpsOk) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
+  if (!gpsOk && !ALLOW_CHECKIN_OUTSIDE_LOCATION) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   const date = dateKey(now);
@@ -564,13 +599,15 @@ async function loadMyLeaves() {
     list.innerHTML = leaves.map((l,i) => {
       const statusCls = l.status==='อนุมัติ'?'status-ok':l.status==='ไม่อนุมัติ'?'status-no':'status-wait';
       const canCancel = l.status === 'รออนุมัติ';
-      return `<div class="leave-item">
-        <div class="leave-item-info">
-          <div class="leave-item-type">${l.type}</div>
-          <div class="leave-item-date">📅 ${l.date} ${l.reason ? '· '+l.reason : ''}</div>
+      return `<div class="leave-history-item">
+        <div class="leave-history-info">
+          <div class="leave-history-type">${escapeHtml(l.type)}</div>
+          <div class="leave-history-date">📅 ${escapeHtml(l.date)}${l.submitted ? ' · ส่ง '+escapeHtml(l.submitted) : ''}</div>
         </div>
-        <span class="leave-item-status ${statusCls}">${l.status}</span>
-        ${canCancel ? `<button class="btn-cancel-leave" onclick="cancelLeave('${name}',${l.row})">ยกเลิก</button>` : ''}
+        <div class="leave-history-actions">
+          <span class="leave-history-status ${statusCls}">${escapeHtml(l.status)}</span>
+          ${canCancel ? `<button class="btn-cancel-leave" onclick='cancelLeave(${JSON.stringify(name)},${l.row})'>ยกเลิก</button>` : ''}
+        </div>
       </div>`;
     }).join('');
   } catch(e) {
@@ -625,13 +662,15 @@ async function loadMyOT() {
     list.innerHTML = ots.map(o => {
       const statusCls = o.status==='อนุมัติ'?'status-ok':o.status==='ไม่อนุมัติ'?'status-no':'status-wait';
       const canCancel = o.status === 'รออนุมัติ';
-      return `<div class="leave-item">
-        <div class="leave-item-info">
-          <div class="leave-item-type">⏰ ${o.start} - ${o.end} (${o.hours} ชม.)</div>
-          <div class="leave-item-date">📅 ${o.date}</div>
+      return `<div class="leave-history-item">
+        <div class="leave-history-info">
+          <div class="leave-history-type">⏰ ${escapeHtml(o.start)} - ${escapeHtml(o.end)} (${escapeHtml(o.hours)} ชม.)</div>
+          <div class="leave-history-date">📅 ${escapeHtml(o.date)}${o.submitted ? ' · ส่ง '+escapeHtml(o.submitted) : ''}</div>
         </div>
-        <span class="leave-item-status ${statusCls}">${o.status}</span>
-        ${canCancel ? `<button class="btn-cancel-leave" onclick="cancelOT('${name}',${o.row})">ยกเลิก</button>` : ''}
+        <div class="leave-history-actions">
+          <span class="leave-history-status ${statusCls}">${escapeHtml(o.status)}</span>
+          ${canCancel ? `<button class="btn-cancel-leave" onclick='cancelOT(${JSON.stringify(name)},${o.row})'>ยกเลิก</button>` : ''}
+        </div>
       </div>`;
     }).join('');
   } catch(e) {
@@ -671,7 +710,7 @@ function renderSchedule() {
       const isOff = shiftText === 'หยุด' || pos === '-';
       if (isOff) return `
         <div class="schedule-card dayoff">
-          <div class="schedule-name">${item.name}</div>
+          <div class="schedule-name">${escapeHtml(item.name)}</div>
           <div class="schedule-detail">🏖️ วันหยุดประจำ</div>
         </div>`;
 
@@ -679,9 +718,9 @@ function renderSchedule() {
       const time = shiftTimes[shiftText] || '';
       return `
         <div class="schedule-card ${shift===1?'shift1':'shift2'}">
-          <div class="schedule-name">${item.name}</div>
-          <div class="schedule-detail">⏰ ${shiftText || 'กะ '+shift}${time ? ': '+time : ''}</div>
-          <span class="schedule-badge">🏷️ ${pos || sheetPositions[0] || '-'}</span>
+          <div class="schedule-name">${escapeHtml(item.name)}</div>
+          <div class="schedule-detail">⏰ ${escapeHtml(shiftText || 'กะ '+shift)}${time ? ': '+escapeHtml(time) : ''}</div>
+          <span class="schedule-badge">🏷️ ${escapeHtml(pos || sheetPositions[0] || '-')}</span>
         </div>`;
     }).join('');
     return;
@@ -692,15 +731,117 @@ function renderSchedule() {
     const isOff = today.includes(dayOff);
     if (isOff) return `
       <div class="schedule-card dayoff">
-        <div class="schedule-name">${name}</div>
-        <div class="schedule-detail">🏖️ วันหยุดประจำ (${dayOff})</div>
+        <div class="schedule-name">${escapeHtml(name)}</div>
+        <div class="schedule-detail">🏖️ วันหยุดประจำ (${escapeHtml(dayOff)})</div>
       </div>`;
     return `
       <div class="schedule-card shift1">
-        <div class="schedule-name">${name}</div>
+        <div class="schedule-name">${escapeHtml(name)}</div>
         <div class="schedule-detail">ไม่พบข้อมูลตารางกะจาก Sheet</div>
       </div>`;
   }).join('');
+}
+
+function renderScheduleConfigView() {
+  const box = document.getElementById('scheduleConfigView');
+  if (!box) return;
+  if (!employees.length) {
+    box.innerHTML = '<div class="empty">ไม่พบข้อมูลพนักงาน</div>';
+    return;
+  }
+
+  const positions = ((scheduleData && scheduleData.positions) || []).slice(0, 3);
+  const positionLabels = ['ตำแหน่ง A','ตำแหน่ง B','ตำแหน่ง C'];
+  const positionHtml = positionLabels.map((label, idx) => `
+    <div>
+      <div class="readonly-label">${label}</div>
+      <div class="readonly-box">${escapeHtml(positions[idx] || '-')}</div>
+    </div>
+  `).join('');
+
+  const peopleHtml = employees.map((name, idx) => {
+    const emp = employeeDetails[name] || {};
+    const scheduleSummary = getScheduleSummaryForEmployee(name);
+    const fixedPosition = scheduleSummary.fixedPosition || formatFixedValue(emp.fixedPosition);
+    const fixedShift = scheduleSummary.fixedShift || formatFixedValue(emp.fixedShift);
+    const dayOff = scheduleSummary.dayOff || emp.dayOff || 'ค่าเดิมระบบ';
+    return `
+      <div class="readonly-employee">
+        <div class="readonly-employee-head"><span class="readonly-number">${idx + 1}</span>${escapeHtml(name)}</div>
+        <div class="schedule-config-grid">
+          <div>
+            <div class="readonly-label">ตำแหน่งหลัก</div>
+            <div class="readonly-box">${escapeHtml(fixedPosition)}</div>
+          </div>
+          <div>
+            <div class="readonly-label">กะหลัก</div>
+            <div class="readonly-box">${escapeHtml(fixedShift)}</div>
+          </div>
+          <div>
+            <div class="readonly-label">วันหยุดประจำ</div>
+            <div class="readonly-box">${escapeHtml(dayOff)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="schedule-config-grid">${positionHtml}</div>
+    <div class="readonly-section-title">กำหนดตำแหน่งหลักแต่ละคน</div>
+    ${peopleHtml}
+    <div class="schedule-config-grid two">
+      <div>
+        <div class="readonly-label">รอบหมุนเวียนตำแหน่ง (อาทิตย์)</div>
+        <div class="readonly-box">ทุก 2 อาทิตย์</div>
+      </div>
+      <div>
+        <div class="readonly-label">รอบหมุนเวียนกะ (อาทิตย์)</div>
+        <div class="readonly-box">ทุก 2 อาทิตย์</div>
+      </div>
+    </div>
+  `;
+}
+
+function formatFixedValue(value) {
+  const text = String(value || '').trim();
+  if (!text || text === 'หมุนเวียน') return 'หมุนเวียน';
+  if (text.indexOf('Fix:') === 0) return text;
+  return 'Fix: ' + text;
+}
+
+function getScheduleSummaryForEmployee(name) {
+  const shifts = (scheduleData && scheduleData.shifts) || [];
+  const item = shifts.find(row => row.name === name);
+  if (!item || !item.days) return {};
+
+  const workShifts = [];
+  const workPositions = [];
+  const offDays = [];
+
+  Object.entries(item.days).forEach(([day, info]) => {
+    const shift = String((info && info.shift) || '').trim();
+    const position = String((info && info.position) || '').trim();
+    if (shift === 'หยุด' || position === '-') {
+      offDays.push(day);
+      return;
+    }
+    if (shift) workShifts.push(shift);
+    if (position) workPositions.push(position);
+  });
+
+  return {
+    fixedShift: summarizeScheduleValue(workShifts),
+    fixedPosition: summarizeScheduleValue(workPositions),
+    dayOff: offDays.join(', ')
+  };
+}
+
+function summarizeScheduleValue(values) {
+  const unique = [...new Set(values.filter(Boolean))];
+  if (!unique.length) return '';
+  if (unique.length === 1) return 'Fix: ' + unique[0];
+  return 'หมุนเวียน';
 }
 
 // CALENDAR
@@ -868,6 +1009,20 @@ function dateKey(date) {
   const m = String(date.getMonth()+1).padStart(2,'0');
   const d = String(date.getDate()).padStart(2,'0');
   return `${y}-${m}-${d}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[ch]));
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
 }
 
 // POPUP
