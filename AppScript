@@ -160,25 +160,27 @@ function getMyOTData(name) {
 
   const sheet = getSheet(SHEETS.ot);
   const table = getFlexibleTable(sheet, "วันที่");
+  const displayTable = getFlexibleDisplayTable(sheet, "วันที่");
   const headers = getHeaderMap(sheet.getRange(table.headerRow, 1, 1, sheet.getLastColumn()).getValues()[0]);
   const ots = [];
 
   table.rows.forEach((row, index) => {
+    const displayRow = displayTable.rows[index] || row;
     if (clean(row[1]) !== target) return;
     const status = clean(row[8]) || "รออนุมัติ";
     if (status === "ยกเลิก") return;
     ots.push({
       row: table.headerRow + 1 + index,
-      date: toDisplayDate(row[0]),
+      date: clean(displayRow[0]) || toDisplayDate(row[0]),
       name: clean(row[1]),
-      start: toDisplayTime(row[2]),
-      end: toDisplayTime(row[3]),
+      start: clean(displayRow[2]) || toDisplayTime(row[2]),
+      end: clean(displayRow[3]) || toDisplayTime(row[3]),
       hours: Number(row[4]) || 0,
       rate: Number(row[5]) || 0,
       total: Number(row[6]) || 0,
       dayStatus: clean(row[7]),
       status,
-      submitted: toDisplayDateTime(row[headers["เวลาที่ยื่น"]])
+      submitted: clean(displayRow[headers["เวลาที่ยื่น"]]) || toDisplayDateTime(row[headers["เวลาที่ยื่น"]])
     });
   });
 
@@ -697,6 +699,38 @@ function getTable(sheet, firstHeaderText) {
 
 function getFlexibleTable(sheet, firstHeaderText) {
   const values = sheet.getDataRange().getValues();
+  const target = clean(firstHeaderText);
+  let headerIndex = -1;
+  for (let r = 0; r < values.length; r++) {
+    if (clean(values[r][0]) === target) {
+      headerIndex = r;
+      break;
+    }
+  }
+  if (headerIndex < 0) {
+    for (let r = 0; r < values.length; r++) {
+      if (clean(values[r][0]).indexOf(target) !== -1) {
+        headerIndex = r;
+        break;
+      }
+    }
+  }
+  if (headerIndex < 0) throw new Error("Header not found: " + firstHeaderText + " in " + sheet.getName());
+
+  const rows = [];
+  for (let r = headerIndex + 1; r < values.length; r++) {
+    const row = values[r];
+    const first = clean(row[0]);
+    if (first.indexOf("💡") === 0 || first.indexOf("📋") === 0) break;
+    if (isEmptyRow(row)) continue;
+    rows.push(row);
+  }
+
+  return { headerRow: headerIndex + 1, rows };
+}
+
+function getFlexibleDisplayTable(sheet, firstHeaderText) {
+  const values = sheet.getDataRange().getDisplayValues();
   const target = clean(firstHeaderText);
   let headerIndex = -1;
   for (let r = 0; r < values.length; r++) {
