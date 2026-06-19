@@ -353,6 +353,7 @@ const SHOP_LAT = 13.687111, SHOP_LNG = 100.532806, RADIUS_M = 150;
 const ALLOW_CHECKIN_OUTSIDE_LOCATION = false; // temporary testing only: set back to false after testing
 
 let HOLIDAYS = {};
+const SCHEDULE_DAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
 
 let selectedEmp = null, gpsOk = false, userLat = null, userLng = null;
 let employees = [];
@@ -698,7 +699,7 @@ function calcHours(s,e) {
 function renderSchedule() {
   const list=document.getElementById('scheduleList');
   if (!employees.length) { list.innerHTML='<div class="empty">ไม่พบข้อมูล</div>'; return; }
-  const today=new Date().toLocaleDateString('th-TH',{weekday:'long'}).replace('วัน','');
+  const today=getScheduleDayName();
   const sheetPositions = (scheduleData && scheduleData.positions) || [];
   const shiftTimes = (scheduleData && scheduleData.shiftTimes) || {};
 
@@ -712,6 +713,12 @@ function renderSchedule() {
         <div class="schedule-card dayoff">
           <div class="schedule-name">${escapeHtml(item.name)}</div>
           <div class="schedule-detail">🏖️ วันหยุดประจำ</div>
+        </div>`;
+
+      if (!shiftText) return `
+        <div class="schedule-card">
+          <div class="schedule-name">${escapeHtml(item.name)}</div>
+          <div class="schedule-detail">ไม่พบข้อมูลตารางกะของวัน${escapeHtml(today)}</div>
         </div>`;
 
       const shift = shiftText.includes('2') ? 2 : 1;
@@ -740,6 +747,10 @@ function renderSchedule() {
         <div class="schedule-detail">ไม่พบข้อมูลตารางกะจาก Sheet</div>
       </div>`;
   }).join('');
+}
+
+function getScheduleDayName(date = new Date()) {
+  return SCHEDULE_DAYS[date.getDay()];
 }
 
 function renderScheduleConfigView() {
