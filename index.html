@@ -708,7 +708,7 @@ function renderSchedule() {
       const dayInfo = item.days && item.days[today] ? item.days[today] : {};
       const shiftText = dayInfo.shift || '';
       const pos = dayInfo.position || '';
-      const isOff = shiftText === 'หยุด' || pos === '-';
+      const isOff = shiftText === 'หยุด';
       if (isOff) return `
         <div class="schedule-card dayoff">
           <div class="schedule-name">${escapeHtml(item.name)}</div>
@@ -761,9 +761,9 @@ function getScheduleStatusForEmployee(name, dayName) {
 
   const shift = String(dayInfo.shift || '').trim();
   const position = String(dayInfo.position || '').trim();
-  if (!shift && !position) return null;
+  if (!shift) return null;
   return {
-    isOff: shift === 'หยุด' || position === '-',
+    isOff: shift === 'หยุด',
     shift,
     position
   };
@@ -849,7 +849,7 @@ function getScheduleSummaryForEmployee(name) {
   Object.entries(item.days).forEach(([day, info]) => {
     const shift = String((info && info.shift) || '').trim();
     const position = String((info && info.position) || '').trim();
-    if (shift === 'หยุด' || position === '-') {
+    if (shift === 'หยุด') {
       offDays.push(day);
       return;
     }
