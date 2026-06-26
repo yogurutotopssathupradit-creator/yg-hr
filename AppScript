@@ -386,9 +386,28 @@ function syncLeaveQuotaFromEdit(e) {
     const sheet = e && e.range && e.range.getSheet ? e.range.getSheet() : null;
     if (!sheet) return;
     if (sheet.getName() === SHEETS.leaves) syncLeaveQuota(e.source);
+    if (sheet.getName() === SHEETS.employees && isEmployeeScheduleConfigEdit_(e)) autoFillSchedule();
   } catch (err) {
     console.error(err);
   }
+}
+
+function isEmployeeScheduleConfigEdit_(e) {
+  if (!e || !e.range) return true;
+  const sheet = e.range.getSheet();
+  const values = sheet.getDataRange().getValues();
+  const headerIndex = findRow(values, "รหัส", 0);
+  if (headerIndex < 0) return true;
+  const headers = getHeaderMap(values[headerIndex]);
+  const watchedColumns = [
+    2,
+    Number(headers["วันหยุดประจำ"]) + 1,
+    Number(headers["ตำแหน่งหลัก"]) + 1,
+    Number(headers["กะหลัก"]) + 1
+  ].filter(Boolean);
+  const firstCol = e.range.getColumn();
+  const lastCol = firstCol + e.range.getNumColumns() - 1;
+  return watchedColumns.some(col => col >= firstCol && col <= lastCol);
 }
 
 function syncMonthlySalary(targetDate, ss) {

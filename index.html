@@ -753,6 +753,22 @@ function getScheduleDayName(date = new Date()) {
   return SCHEDULE_DAYS[date.getDay()];
 }
 
+function getScheduleStatusForEmployee(name, dayName) {
+  const shifts = (scheduleData && scheduleData.shifts) || [];
+  const item = shifts.find(row => row.name === name);
+  const dayInfo = item && item.days ? item.days[dayName] : null;
+  if (!dayInfo) return null;
+
+  const shift = String(dayInfo.shift || '').trim();
+  const position = String(dayInfo.position || '').trim();
+  if (!shift && !position) return null;
+  return {
+    isOff: shift === 'หยุด' || position === '-',
+    shift,
+    position
+  };
+}
+
 function renderScheduleConfigView() {
   const box = document.getElementById('scheduleConfigView');
   if (!box) return;
@@ -1072,8 +1088,9 @@ function showDayPopup(dateStr, d) {
     <div class="popup-section-title">👥 สถานะพนักงาน</div>`;
   employees.forEach(name => {
     const isLeave = leaves.includes(name);
+    const scheduleStatus = getScheduleStatusForEmployee(name, dayName);
     const dayOff = employeeDetails[name] && employeeDetails[name].dayOff;
-    const isDayOff = dayOff && dayName.includes(dayOff.replace('บดี',''));
+    const isDayOff = scheduleStatus ? scheduleStatus.isOff : (dayOff && dayName.includes(dayOff.replace('บดี','')));
     if (isLeave) {
       html += `<div class="popup-item leave">👤 ${name} — ลางาน</div>`;
     } else if (isDayOff) {
