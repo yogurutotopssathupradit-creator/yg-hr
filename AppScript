@@ -411,7 +411,11 @@ function isEmployeeScheduleConfigEdit_(e) {
 }
 
 function syncMonthlySalary(targetDate, ss) {
-  const date = targetDate || new Date();
+  // Installable time-based triggers pass an event object as the first argument.
+  // Only treat an actual, valid Date as an explicit salary period.
+  const date = targetDate instanceof Date && !isNaN(targetDate.getTime())
+    ? targetDate
+    : new Date();
   const period = getMonthPeriod(date);
   const employees = getEmployeesData().employees;
   const checkins = calculateMonthlyCheckins(period.start, period.end, ss);
@@ -498,6 +502,10 @@ function syncMonthlySalary(targetDate, ss) {
   ensureSalaryRows(sheet, table, rows.length);
   sheet.getRange(table.headerRow + 1, 1, rows.length, 12).setValues(rows);
   return { status: "ok", month: period.label, rows: rows.length };
+}
+
+function runMonthlySalaryNow() {
+  return syncMonthlySalary();
 }
 
 function calculateMonthlyCheckins(start, end, ss) {
@@ -1037,7 +1045,7 @@ function setAllTriggers() {
     .timeBased()
     .everyMinutes(10)
     .create();
-  ScriptApp.newTrigger("syncMonthlySalary")
+  ScriptApp.newTrigger("runMonthlySalaryNow")
     .timeBased()
     .onMonthDay(28)
     .atHour(6)

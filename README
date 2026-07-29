@@ -62,6 +62,8 @@ Edit the "วันหยุดนักขัตฤกษ์" tab.
 Monthly salary summary:
 Saved in the "สรุปเงินเดือน" tab.
 Apps Script updates it automatically on the 28th of every month.
+To update it immediately, select and run:
+runMonthlySalaryNow
 The app calculates work days, approved leave, unpaid leave, holiday work, OT, normal pay, special holiday pay, and net total.
 "เบี้ยขยัน" and "Incentive" are not auto-calculated. Admin can fill those in manually, and the next salary sync keeps those values.
 
