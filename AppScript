@@ -7,6 +7,30 @@ const SPREADSHEET_ID = "1P9Hl80PDTMGWq0s5ztlVGp4pAWE4EdFs1qHLXwwa8og";
 const TIMEZONE = "Asia/Bangkok";
 const APP_SECRET = "yg_hr_2026_h7m4Q9vT2kP8sR6n";
 const THAI_MONTH_NAMES = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+const CHECKIN_FILTER = {
+  labelCell: "H2",
+  selectorCell: "I2",
+  allLabel: "ทั้งหมด"
+};
+const LEAVE_FILTER = {
+  labelCell: "I2",
+  selectorCell: "J2",
+  legacySelectorCell: "K2",
+  allLabel: "ทั้งหมด",
+  firstHeader: "วันที่ยื่น",
+  dateColumn: 4,
+  columnCount: 8
+};
+const OT_FILTER = {
+  labelCell: "L2",
+  selectorCell: "M2",
+  legacySelectorCell: "L2",
+  allLabel: "ทั้งหมด",
+  firstHeader: "วันที่",
+  dateColumn: 1,
+  columnCount: 10,
+  filterColumnCount: 9
+};
 
 const SHEETS = {
   employees: "พนักงาน",
@@ -297,8 +321,8 @@ function doCheckin(data) {
   const day = thaiDayName(dateObj);
   const isHoliday = checkHoliday(dateKey);
 
-  writeDataRow(sheet, "วันที่", [
-    toDisplayDate(dateKey),
+  const checkinRow = writeDataRow(sheet, "วันที่", [
+    dateObj,
     clean(data.name),
     clean(data.type),
     clean(data.time),
@@ -306,6 +330,10 @@ function doCheckin(data) {
     isHoliday ? "วันหยุดนักขัตฤกษ์" : "วันธรรมดา",
     clean(data.note)
   ]);
+  sheet.getRange(checkinRow, 1).setNumberFormat("dd/MM/yyyy");
+
+  sortCheckinRowsNewestFirst_(sheet, getFlexibleTable(sheet, "วันที่"));
+  refreshCheckinFilter_(sheet);
 
   return { status: "ok" };
 }
@@ -329,6 +357,8 @@ function doLeave(data) {
     "รออนุมัติ"
   ]);
   applyValidationFromNearbyRow(sheet, row, 8);
+  sortMonthlyRequestRowsNewestFirst_(sheet, getFlexibleTable(sheet, LEAVE_FILTER.firstHeader), LEAVE_FILTER);
+  refreshMonthlyRequestFilter_(sheet, LEAVE_FILTER);
 
   return { status: "ok" };
 }
@@ -375,17 +405,367 @@ function syncLeaveQuota(ss) {
 
 function handleSheetEdit(e) {
   syncLeaveQuotaFromEdit(e);
+  applyCheckinMonthFilterFromEdit_(e);
+  applyMonthlyRequestFilterFromEdit_(e);
 }
 
-function onEdit(e) {
-  syncLeaveQuotaFromEdit(e);
+function applyMonthlyRequestFilterFromEdit_(e) {
+  try {
+    if (!e || !e.range) return;
+    const sheet = e.range.getSheet();
+    const config = sheet.getName() === SHEETS.leaves
+      ? LEAVE_FILTER
+      : sheet.getName() === SHEETS.ot
+        ? OT_FILTER
+        : null;
+    if (!config || e.range.getA1Notation() !== config.selectorCell) return;
+    applyMonthlyRequestFilter_(sheet, config);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function applyCheckinMonthFilterFromEdit_(e) {
+  try {
+    if (!e || !e.range) return;
+    const sheet = e.range.getSheet();
+    if (sheet.getName() !== SHEETS.checkins) return;
+    if (e.range.getA1Notation() !== CHECKIN_FILTER.selectorCell) return;
+    applyCheckinMonthFilter_(sheet);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/**
+ * Run once after deploying, or run setAllTriggers(), to restore the standard
+ * check-in table, show all records, enable its native filter and sort newest first.
+ */
+function setupCheckinTable() {
+  const ss = getSs();
+  const sheet = getSheet(SHEETS.checkins, ss);
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) sheet.showRows(2, lastRow - 1);
+
+  let table = getFlexibleTable(sheet, "วันที่");
+  const selectorLabel = clean(sheet.getRange("H2").getDisplayValue());
+  const rowTwoMainCells = sheet.getRange(2, 1, 1, 7).getDisplayValues()[0];
+  if (table.headerRow === 3 && selectorLabel === "เลือกเดือน" && isEmptyRow(rowTwoMainCells)) {
+    sheet.deleteRow(2);
+  } else {
+    sheet.getRange("H2:I2").clearContent().clearDataValidations().setBackground(null).setFontColor(null).setFontWeight("normal");
+  }
+
+  table = getFlexibleTable(sheet, "วันที่");
+  sortCheckinRowsNewestFirst_(sheet, table);
+  setupCheckinMonthSelector_(sheet);
+  refreshCheckinFilter_(sheet);
+  return { status: "ok", rows: table.rows.length };
+}
+
+function setupCheckinMonthSelector_(sheet) {
+  const options = [CHECKIN_FILTER.allLabel].concat(getCheckinMonthOptions_(sheet));
+  const current = clean(sheet.getRange(CHECKIN_FILTER.selectorCell).getDisplayValue());
+  const selected = options.indexOf(current) >= 0 ? current : getMonthPeriod(new Date()).label;
+
+  sheet.getRange(CHECKIN_FILTER.labelCell)
+    .setValue("เลือกเดือน")
+    .setFontWeight("bold")
+    .setBackground("#E6F4EA")
+    .setFontColor("#174E3B");
+  sheet.getRange(CHECKIN_FILTER.selectorCell)
+    .setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(options, true)
+      .setAllowInvalid(false)
+      .build())
+    .setValue(selected)
+    .setBackground("#E6F4EA")
+    .setFontColor("#174E3B");
+}
+
+function refreshCheckinFilter_(sheet) {
+  const selected = clean(sheet.getRange(CHECKIN_FILTER.selectorCell).getDisplayValue()) || CHECKIN_FILTER.allLabel;
+  const table = getFlexibleTable(sheet, "วันที่");
+  ensureCheckinFilter_(sheet, table);
+  applyCheckinMonthFilter_(sheet, selected);
+}
+
+function applyCheckinMonthFilter_(sheet, selectedValue) {
+  const selected = clean(selectedValue || sheet.getRange(CHECKIN_FILTER.selectorCell).getDisplayValue());
+  const filter = sheet.getFilter();
+  if (!filter) return;
+  if (!selected || selected === CHECKIN_FILTER.allLabel) {
+    filter.removeColumnFilterCriteria(1);
+    return;
+  }
+
+  const period = parseThaiMonthLabel_(selected);
+  if (!period) return;
+  const table = getFlexibleTable(sheet, "วันที่");
+  const firstDataRow = table.headerRow + 1;
+  const formula = "=AND($A" + firstDataRow + ">=DATE(" + period.year + "," + period.month + ",1)," +
+    "$A" + firstDataRow + "<DATE(" + period.nextYear + "," + period.nextMonth + ",1))";
+  filter.setColumnFilterCriteria(1, SpreadsheetApp.newFilterCriteria()
+    .whenFormulaSatisfied(formula)
+    .build());
+}
+
+function getCheckinMonthOptions_(sheet) {
+  const table = getFlexibleTable(sheet, "วันที่");
+  const displayedDates = table.rows.length
+    ? sheet.getRange(table.headerRow + 1, 1, table.rows.length, 1).getDisplayValues()
+    : [];
+  const months = {};
+  displayedDates.forEach(row => {
+    const date = parseDate(row[0]);
+    if (!date) return;
+    const key = Utilities.formatDate(date, TIMEZONE, "yyyy-MM");
+    months[key] = getMonthPeriod(date).label;
+  });
+  const now = new Date();
+  months[Utilities.formatDate(now, TIMEZONE, "yyyy-MM")] = getMonthPeriod(now).label;
+  return Object.keys(months).sort().reverse().map(key => months[key]);
+}
+
+function parseThaiMonthLabel_(label) {
+  const match = clean(label).match(/^(.+?)\s+(\d{4})$/);
+  if (!match) return null;
+  const month = THAI_MONTH_NAMES.indexOf(match[1]);
+  const buddhistYear = Number(match[2]);
+  if (month < 0 || !buddhistYear) return null;
+  const year = buddhistYear - 543;
+  const nextDate = new Date(year, month + 1, 1);
+  return {
+    year,
+    month: month + 1,
+    nextYear: nextDate.getFullYear(),
+    nextMonth: nextDate.getMonth() + 1
+  };
+}
+
+function sortCheckinRowsNewestFirst_(sheet, table) {
+  const firstDataRow = table.headerRow + 1;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < firstDataRow) return;
+
+  const columnCount = 7;
+  const range = sheet.getRange(firstDataRow, 1, lastRow - firstDataRow + 1, columnCount);
+  const values = range.getValues();
+  const displayValues = range.getDisplayValues();
+  const dataRows = [];
+
+  // Check-in records are contiguous. Stop before blank space or instruction rows
+  // so those rows keep their original position below the table.
+  for (let i = 0; i < values.length; i++) {
+    if (!normalizeDateKey(displayValues[i][0])) break;
+    const normalizedValues = values[i].slice();
+    // Migrate legacy text/locale-dependent dates to an unambiguous Date value.
+    normalizedValues[0] = parseDate(displayValues[i][0]) || values[i][0];
+    dataRows.push({ values: normalizedValues, date: displayValues[i][0], time: displayValues[i][3] });
+  }
+  if (!dataRows.length) return;
+
+  dataRows.sort((a, b) => {
+    const dateCompare = normalizeDateKey(b.date).localeCompare(normalizeDateKey(a.date));
+    if (dateCompare) return dateCompare;
+    return timeSortValue_(b.time) - timeSortValue_(a.time);
+  });
+
+  sheet.getRange(firstDataRow, 1, dataRows.length, columnCount).setValues(dataRows.map(row => row.values));
+  sheet.getRange(firstDataRow, 1, dataRows.length, 1).setNumberFormat("dd/MM/yyyy");
+}
+
+function timeSortValue_(value) {
+  const text = toDisplayTime(value);
+  const match = text.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return -1;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function ensureCheckinFilter_(sheet, table) {
+  const existing = sheet.getFilter();
+  if (existing) existing.remove();
+  const rowCount = Math.max(table.rows.length + 1, 2);
+  sheet.getRange(table.headerRow, 1, rowCount, 7).createFilter();
+}
+
+function setupLeaveAndOtTables() {
+  const ss = getSs();
+  const leaveResult = setupMonthlyRequestTable_(getSheet(SHEETS.leaves, ss), LEAVE_FILTER);
+  const otResult = setupMonthlyRequestTable_(getSheet(SHEETS.ot, ss), OT_FILTER);
+  return { status: "ok", leaves: leaveResult.rows, ot: otResult.rows };
+}
+
+function setupMonthlyRequestTable_(sheet, config) {
+  const table = getFlexibleTable(sheet, config.firstHeader);
+  sortMonthlyRequestRowsNewestFirst_(sheet, table, config);
+  setupMonthlyRequestSelector_(sheet, config);
+  refreshMonthlyRequestFilter_(sheet, config);
+  return { status: "ok", rows: table.rows.length };
+}
+
+function setupMonthlyRequestSelector_(sheet, config) {
+  const options = [config.allLabel].concat(getMonthlyRequestOptions_(sheet, config));
+  const current = clean(sheet.getRange(config.selectorCell).getDisplayValue());
+  const legacy = clean(sheet.getRange(config.legacySelectorCell).getDisplayValue());
+  const selected = options.indexOf(current) >= 0
+    ? current
+    : options.indexOf(legacy) >= 0
+      ? legacy
+      : getMonthPeriod(new Date()).label;
+
+  if (config.legacySelectorCell !== config.labelCell) {
+    sheet.getRange(config.legacySelectorCell)
+      .clearContent()
+      .clearDataValidations()
+      .setBackground(null)
+      .setFontColor(null)
+      .setFontWeight("normal");
+  }
+
+  sheet.getRange(config.labelCell)
+    .setValue("เลือกเดือน")
+    .setFontWeight("bold")
+    .setBackground("#E6F4EA")
+    .setFontColor("#174E3B");
+  sheet.getRange(config.selectorCell)
+    .setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(options, true)
+      .setAllowInvalid(false)
+      .build())
+    .setValue(selected)
+    .setBackground("#E6F4EA")
+    .setFontColor("#174E3B");
+}
+
+function refreshMonthlyRequestFilter_(sheet, config) {
+  const selected = clean(sheet.getRange(config.selectorCell).getDisplayValue()) || config.allLabel;
+  const table = getFlexibleTable(sheet, config.firstHeader);
+  ensureMonthlyRequestFilter_(sheet, table, config);
+  applyMonthlyRequestFilter_(sheet, config, selected);
+}
+
+function applyMonthlyRequestFilter_(sheet, config, selectedValue) {
+  const selected = clean(selectedValue || sheet.getRange(config.selectorCell).getDisplayValue());
+  const filter = sheet.getFilter();
+  if (!filter) return;
+  if (!selected || selected === config.allLabel) {
+    filter.removeColumnFilterCriteria(config.dateColumn);
+    return;
+  }
+
+  const period = parseThaiMonthLabel_(selected);
+  if (!period) return;
+  const table = getFlexibleTable(sheet, config.firstHeader);
+  const firstDataRow = table.headerRow + 1;
+  const columnLetter = columnToLetter_(config.dateColumn);
+  const formula = "=AND($" + columnLetter + firstDataRow + ">=DATE(" + period.year + "," + period.month + ",1)," +
+    "$" + columnLetter + firstDataRow + "<DATE(" + period.nextYear + "," + period.nextMonth + ",1))";
+  filter.setColumnFilterCriteria(config.dateColumn, SpreadsheetApp.newFilterCriteria()
+    .whenFormulaSatisfied(formula)
+    .build());
+}
+
+function getMonthlyRequestOptions_(sheet, config) {
+  const table = getFlexibleTable(sheet, config.firstHeader);
+  const dates = table.rows.length
+    ? sheet.getRange(table.headerRow + 1, config.dateColumn, table.rows.length, 1).getDisplayValues()
+    : [];
+  const months = {};
+  dates.forEach(row => {
+    const date = parseDate(row[0]);
+    if (!date) return;
+    const key = Utilities.formatDate(date, TIMEZONE, "yyyy-MM");
+    months[key] = getMonthPeriod(date).label;
+  });
+  const now = new Date();
+  months[Utilities.formatDate(now, TIMEZONE, "yyyy-MM")] = getMonthPeriod(now).label;
+  return Object.keys(months).sort().reverse().map(key => months[key]);
+}
+
+function sortMonthlyRequestRowsNewestFirst_(sheet, table, config) {
+  if (!table.rows.length) return;
+  const firstDataRow = table.headerRow + 1;
+  const range = sheet.getRange(firstDataRow, 1, table.rows.length, config.columnCount);
+  const values = range.getValues();
+  const displayed = range.getDisplayValues();
+  const dateIndex = config.dateColumn - 1;
+  const rows = values.map((row, index) => {
+    const normalized = row.slice();
+    normalized[dateIndex] = parseDate(displayed[index][dateIndex]) || row[dateIndex];
+    if (config === LEAVE_FILTER) normalized[4] = parseDate(displayed[index][4]) || row[4];
+    return {
+      values: normalized,
+      date: normalizeDateKey(displayed[index][dateIndex]),
+      submitted: config === LEAVE_FILTER
+        ? parseDateTimeValue(displayed[index][0])
+        : parseDateTimeValue(displayed[index][9]),
+      time: config === OT_FILTER ? timeSortValue_(displayed[index][2]) : 0
+    };
+  });
+
+  rows.sort((a, b) => {
+    const dateCompare = b.date.localeCompare(a.date);
+    if (dateCompare) return dateCompare;
+    const submittedCompare = b.submitted - a.submitted;
+    if (submittedCompare) return submittedCompare;
+    return b.time - a.time;
+  });
+
+  range.setValues(rows.map(row => row.values));
+  sheet.getRange(firstDataRow, config.dateColumn, rows.length, 1).setNumberFormat("dd/MM/yyyy");
+  if (config === LEAVE_FILTER) sheet.getRange(firstDataRow, 5, rows.length, 1).setNumberFormat("dd/MM/yyyy");
+}
+
+function ensureMonthlyRequestFilter_(sheet, table, config) {
+  const existing = sheet.getFilter();
+  if (existing) existing.remove();
+  const filterColumnCount = config.filterColumnCount || config.columnCount;
+  const dataRowCount = getContiguousDatedRowCount_(sheet, table, config.dateColumn);
+  let rowCount = dataRowCount + 1;
+  let filterRange = sheet.getRange(table.headerRow, 1, rowCount, filterColumnCount);
+  const mergedRanges = filterRange.getMergedRanges();
+
+  if (mergedRanges.length) {
+    const firstMergedRow = Math.min.apply(null, mergedRanges.map(range => range.getRow()));
+    rowCount = firstMergedRow - table.headerRow;
+    if (rowCount < 1) throw new Error("Filter header contains merged cells in " + sheet.getName());
+    filterRange = sheet.getRange(table.headerRow, 1, rowCount, filterColumnCount);
+  }
+
+  filterRange.createFilter();
+}
+
+function getContiguousDatedRowCount_(sheet, table, dateColumn) {
+  const available = sheet.getLastRow() - table.headerRow;
+  if (available <= 0) return 0;
+  const dates = sheet.getRange(table.headerRow + 1, dateColumn, available, 1).getDisplayValues();
+  let count = 0;
+  for (let i = 0; i < dates.length; i++) {
+    if (!parseDate(dates[i][0])) break;
+    count++;
+  }
+  return count;
+}
+
+function columnToLetter_(column) {
+  let result = "";
+  let value = column;
+  while (value > 0) {
+    value--;
+    result = String.fromCharCode(65 + (value % 26)) + result;
+    value = Math.floor(value / 26);
+  }
+  return result;
 }
 
 function syncLeaveQuotaFromEdit(e) {
   try {
     const sheet = e && e.range && e.range.getSheet ? e.range.getSheet() : null;
     if (!sheet) return;
-    if (sheet.getName() === SHEETS.leaves) syncLeaveQuota(e.source);
+    if (sheet.getName() === SHEETS.leaves && e.range.getA1Notation() !== LEAVE_FILTER.selectorCell) {
+      syncLeaveQuota(e.source);
+    }
     if (sheet.getName() === SHEETS.employees && isEmployeeScheduleConfigEdit_(e)) autoFillSchedule();
   } catch (err) {
     console.error(err);
@@ -644,6 +1024,8 @@ function doOT(data) {
     submittedAt
   ]);
   applyValidationFromNearbyRow(sheet, row, 9);
+  sortMonthlyRequestRowsNewestFirst_(sheet, getFlexibleTable(sheet, OT_FILTER.firstHeader), OT_FILTER);
+  refreshMonthlyRequestFilter_(sheet, OT_FILTER);
 
   return { status: "ok" };
 }
@@ -1054,4 +1436,6 @@ function setAllTriggers() {
     .forSpreadsheet(getSs())
     .onEdit()
     .create();
+  setupCheckinTable();
+  setupLeaveAndOtTables();
 }

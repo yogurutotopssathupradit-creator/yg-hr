@@ -122,19 +122,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .schedule-name{font-size:15px;font-weight:700;margin-bottom:4px;}
 .schedule-detail{font-size:13px;color:var(--mid);}
 .schedule-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px;background:white;}
-.schedule-config-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:18px;}
-.schedule-config-grid.two{grid-template-columns:1fr;}
-.readonly-label{font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px;}
-.readonly-box{border:1.5px solid #E2E8F0;border-radius:12px;padding:12px 14px;background:var(--light);font-size:15px;font-weight:600;min-height:46px;display:flex;align-items:center;}
-.readonly-section-title{font-size:14px;font-weight:800;color:var(--green);margin:18px 0 12px;}
-.readonly-employee{border-top:1px solid #E2E8F0;padding:14px 0;}
-.readonly-employee:first-child{border-top:none;padding-top:0;}
-.readonly-employee-head{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;margin-bottom:12px;}
-.readonly-number{width:34px;height:34px;border-radius:10px;background:var(--green);color:white;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-@media (min-width:640px){
-  .schedule-config-grid{grid-template-columns:repeat(3,1fr);}
-  .schedule-config-grid.two{grid-template-columns:repeat(2,1fr);}
-}
 
 /* TOAST */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:white;padding:11px 20px;border-radius:28px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.2);transition:transform 0.3s cubic-bezier(.175,.885,.32,1.275);z-index:999;white-space:nowrap;}
@@ -303,10 +290,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
     <div class="card-label">ตารางกะสัปดาห์นี้</div>
     <div id="scheduleList"><div class="loading">กำลังโหลด...</div></div>
   </div>
-  <div class="card">
-    <div class="card-label">ข้อมูลตั้งค่าตารางกะ</div>
-    <div id="scheduleConfigView"><div class="loading">กำลังโหลด...</div></div>
-  </div>
 </div>
 
 <!-- CALENDAR -->
@@ -416,7 +399,6 @@ async function loadEmployees() {
   populateSelects();
   renderEmployeeLegend();
   renderSchedule();
-  renderScheduleConfigView();
   await loadLeaveData();
 }
 
@@ -440,7 +422,6 @@ async function loadScheduleData() {
     const data = await apiGet('getSchedule');
     scheduleData = data;
     renderSchedule();
-    renderScheduleConfigView();
   } catch(e) {}
 }
 
@@ -767,108 +748,6 @@ function getScheduleStatusForEmployee(name, dayName) {
     shift,
     position
   };
-}
-
-function renderScheduleConfigView() {
-  const box = document.getElementById('scheduleConfigView');
-  if (!box) return;
-  if (!employees.length) {
-    box.innerHTML = '<div class="empty">ไม่พบข้อมูลพนักงาน</div>';
-    return;
-  }
-
-  const positions = ((scheduleData && scheduleData.positions) || []).slice(0, 3);
-  const positionLabels = ['ตำแหน่ง A','ตำแหน่ง B','ตำแหน่ง C'];
-  const positionHtml = positionLabels.map((label, idx) => `
-    <div>
-      <div class="readonly-label">${label}</div>
-      <div class="readonly-box">${escapeHtml(positions[idx] || '-')}</div>
-    </div>
-  `).join('');
-
-  const peopleHtml = employees.map((name, idx) => {
-    const emp = employeeDetails[name] || {};
-    const scheduleSummary = getScheduleSummaryForEmployee(name);
-    const fixedPosition = scheduleSummary.fixedPosition || formatFixedValue(emp.fixedPosition);
-    const fixedShift = scheduleSummary.fixedShift || formatFixedValue(emp.fixedShift);
-    const dayOff = scheduleSummary.dayOff || emp.dayOff || 'ค่าเดิมระบบ';
-    return `
-      <div class="readonly-employee">
-        <div class="readonly-employee-head"><span class="readonly-number">${idx + 1}</span>${escapeHtml(name)}</div>
-        <div class="schedule-config-grid">
-          <div>
-            <div class="readonly-label">ตำแหน่งหลัก</div>
-            <div class="readonly-box">${escapeHtml(fixedPosition)}</div>
-          </div>
-          <div>
-            <div class="readonly-label">กะหลัก</div>
-            <div class="readonly-box">${escapeHtml(fixedShift)}</div>
-          </div>
-          <div>
-            <div class="readonly-label">วันหยุดประจำ</div>
-            <div class="readonly-box">${escapeHtml(dayOff)}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  box.innerHTML = `
-    <div class="schedule-config-grid">${positionHtml}</div>
-    <div class="readonly-section-title">กำหนดตำแหน่งหลักแต่ละคน</div>
-    ${peopleHtml}
-    <div class="schedule-config-grid two">
-      <div>
-        <div class="readonly-label">รอบหมุนเวียนตำแหน่ง (อาทิตย์)</div>
-        <div class="readonly-box">ทุก 2 อาทิตย์</div>
-      </div>
-      <div>
-        <div class="readonly-label">รอบหมุนเวียนกะ (อาทิตย์)</div>
-        <div class="readonly-box">ทุก 2 อาทิตย์</div>
-      </div>
-    </div>
-  `;
-}
-
-function formatFixedValue(value) {
-  const text = String(value || '').trim();
-  if (!text || text === 'หมุนเวียน') return 'หมุนเวียน';
-  if (text.indexOf('Fix:') === 0) return text;
-  return 'Fix: ' + text;
-}
-
-function getScheduleSummaryForEmployee(name) {
-  const shifts = (scheduleData && scheduleData.shifts) || [];
-  const item = shifts.find(row => row.name === name);
-  if (!item || !item.days) return {};
-
-  const workShifts = [];
-  const workPositions = [];
-  const offDays = [];
-
-  Object.entries(item.days).forEach(([day, info]) => {
-    const shift = String((info && info.shift) || '').trim();
-    const position = String((info && info.position) || '').trim();
-    if (shift === 'หยุด') {
-      offDays.push(day);
-      return;
-    }
-    if (shift) workShifts.push(shift);
-    if (position) workPositions.push(position);
-  });
-
-  return {
-    fixedShift: summarizeScheduleValue(workShifts),
-    fixedPosition: summarizeScheduleValue(workPositions),
-    dayOff: offDays.join(', ')
-  };
-}
-
-function summarizeScheduleValue(values) {
-  const unique = [...new Set(values.filter(Boolean))];
-  if (!unique.length) return '';
-  if (unique.length === 1) return 'Fix: ' + unique[0];
-  return 'หมุนเวียน';
 }
 
 // CALENDAR

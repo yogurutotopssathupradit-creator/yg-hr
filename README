@@ -30,9 +30,16 @@ Only rows with "ตำแหน่ง" set to "พนักงาน" will appea
 
 Check-in and check-out records:
 Saved in the "เช็คอิน-เอาท์" tab.
+Records are automatically sorted newest first, then by the latest time on the same day.
+Dates are stored as real dates and displayed as `dd/MM/yyyy`.
+Use the month selector in H2:I2; it applies the standard Sheet date filter without hiding rows one by one.
+Choose "ทั้งหมด" to show every record. The standard filter in the table header remains available.
+After deploying this version, run `setupCheckinTable` once (or run `setAllTriggers`).
 
 Leave requests:
 Saved in the "ลางาน" tab.
+Use the month selector in I2:J2, or choose "ทั้งหมด" to show every request.
+Requests are sorted by leave date, newest first.
 New requests are inserted at the top of the request table, newest first.
 Admin can change the status in the sheet.
 The submitted date includes the time, so requests can be sorted by when staff sent them.
@@ -43,6 +50,8 @@ The "ใช้ไป" and "คงเหลือ" columns are the numbers that u
 
 OT requests:
 Saved in the "โอที" tab.
+Use the month selector in L2:M2, or choose "ทั้งหมด" to show every request.
+Requests are sorted by OT date, newest first.
 New requests are inserted at the top of the request table, newest first.
 Admin can change the status in the sheet.
 The "เวลาที่ยื่น" column shows when staff sent the OT request.
