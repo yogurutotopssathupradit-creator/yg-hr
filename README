@@ -28,6 +28,11 @@ Employee names:
 Edit the "พนักงาน" tab.
 Only rows with "ตำแหน่ง" set to "พนักงาน" will appear in the web app.
 
+Part-time employee names:
+Edit the "พนักงานพาร์ทไทม์" tab, which uses the same columns as "พนักงาน".
+The "ตำแหน่ง" column is free text; enter the employee's actual position and the hourly wage in "ค่าจ้าง (บาท/ชั่วโมง)".
+Part-time employees appear in check-in/out and OT, but not in leave quota or the regular weekly schedule.
+
 Check-in and check-out records:
 Saved in the "เช็คอิน-เอาท์" tab.
 Records are automatically sorted newest first, then by the latest time on the same day.
@@ -35,6 +40,7 @@ Dates are stored as real dates and displayed as `dd/MM/yyyy`.
 Use the month selector in H2:I2; it applies the standard Sheet date filter without hiding rows one by one.
 Choose "ทั้งหมด" to show every record. The standard filter in the table header remains available.
 After deploying this version, run `setupCheckinTable` once (or run `setAllTriggers`).
+Also run `setupPartTimeTables` once to create the two part-time tabs and add ฟ้า and แคท. Running `setAllTriggers` does this too.
 
 Leave requests:
 Saved in the "ลางาน" tab.
@@ -75,6 +81,13 @@ To update it immediately, select and run:
 runMonthlySalaryNow
 The app calculates work days, approved leave, unpaid leave, holiday work, OT, normal pay, special holiday pay, and net total.
 "เบี้ยขยัน" and "Incentive" are not auto-calculated. Admin can fill those in manually, and the next salary sync keeps those values.
+Regular employees receive 400 baht extra for each public holiday worked.
+
+Part-time salary summary:
+Saved separately in the "สรุปเงินเดือนพาร์ทไทม์" tab.
+Its title, month row, colors, data rows, and total row follow the format of "สรุปเงินเดือน", using the part-time payroll columns.
+It calculates clocked hours from matched check-in/check-out records, subtracts approved OT hours from normal hours, and pays those OT hours once at the OT rate.
+The initial part-time employees are ฟ้า and แคท, each at 50 baht/hour and 75 baht/OT hour.
 
 
 Important rules

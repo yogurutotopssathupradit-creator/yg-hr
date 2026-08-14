@@ -34,14 +34,21 @@ const OT_FILTER = {
 
 const SHEETS = {
   employees: "พนักงาน",
+  partTimeEmployees: "พนักงานพาร์ทไทม์",
   checkins: "เช็คอิน-เอาท์",
   schedule: "ตารางกะ",
   leaves: "ลางาน",
   ot: "โอที",
   holidays: "วันหยุดนักขัตฤกษ์",
   quota: "โควต้าการลา",
-  salary: "สรุปเงินเดือน"
+  salary: "สรุปเงินเดือน",
+  partTimeSalary: "สรุปเงินเดือนพาร์ทไทม์"
 };
+
+const PART_TIME_DEFAULTS = [
+  { id: "PT001", name: "ฟ้า", hourlyRate: 50, otRate: 75 },
+  { id: "PT002", name: "แคท", hourlyRate: 50, otRate: 75 }
+];
 
 function doGet(e) {
   try {
@@ -84,8 +91,26 @@ function doPost(e) {
   }
 }
 
-function getEmployeesData() {
-  const sheet = getSheet(SHEETS.employees);
+function getEmployeesData(ss) {
+  const regularEmployees = getEmployeesFromSheet_(SHEETS.employees, "fullTime", ss);
+  const partTimeEmployees = getEmployeesFromSheet_(SHEETS.partTimeEmployees, "partTime", ss, true);
+  const employees = regularEmployees.concat(partTimeEmployees);
+
+  return {
+    status: "ok",
+    names: employees.map(emp => emp.name),
+    regularNames: regularEmployees.map(emp => emp.name),
+    partTimeNames: partTimeEmployees.map(emp => emp.name),
+    employees
+  };
+}
+
+function getEmployeesFromSheet_(sheetName, employmentType, ss, optional) {
+  const sheet = getOptionalSheet_(sheetName, ss);
+  if (!sheet) {
+    if (optional) return [];
+    throw new Error("Sheet not found: " + sheetName);
+  }
   const values = sheet.getDataRange().getValues();
   const headerIndex = findRow(values, "รหัส", 0);
   if (headerIndex < 0) throw new Error("Header not found: รหัส in " + sheet.getName());
@@ -97,7 +122,10 @@ function getEmployeesData() {
     if (clean(row[0]).indexOf("💡") === 0) return;
     const name = clean(row[1]);
     const role = clean(row[2]);
-    if (name && role === "พนักงาน") {
+    // The part-time tab itself identifies the employment type, so its
+    // "ตำแหน่ง" column is free text (for example แคชเชียร์ or ครัว).
+    const isExpectedRole = employmentType === "partTime" || role === "พนักงาน";
+    if (name && isExpectedRole) {
       employees.push({
         id: clean(row[0]),
         name,
@@ -105,17 +133,19 @@ function getEmployeesData() {
         phone: clean(row[3]),
         startDate: toDisplayDate(row[4]),
         salary: row[5] || "",
+        hourlyRate: employmentType === "partTime" ? Number(row[5]) || 0 : 0,
         otRate: Number(row[6]) || 0,
         dayOff: clean(row[7]),
         userId: clean(row[8]),
         note: clean(row[9]),
         fixedPosition: clean(row[headers["ตำแหน่งหลัก"]]),
-        fixedShift: clean(row[headers["กะหลัก"]])
+        fixedShift: clean(row[headers["กะหลัก"]]),
+        employmentType
       });
     }
   });
 
-  return { status: "ok", names: employees.map(emp => emp.name), employees };
+  return employees;
 }
 
 function getLeavesData() {
@@ -222,7 +252,7 @@ function getScheduleData() {
   const shifts = [];
   const shiftTimes = parseShiftTimes(values);
   const positions = [];
-  const employeeNames = getEmployeesData().names;
+  const employeeNames = getEmployeesData().regularNames;
 
   if (shiftHeader < 0) return { status: "ok", week: "", days, shifts, shiftTimes, positions };
 
@@ -797,7 +827,7 @@ function syncMonthlySalary(targetDate, ss) {
     ? targetDate
     : new Date();
   const period = getMonthPeriod(date);
-  const employees = getEmployeesData().employees;
+  const employees = getEmployeesData(ss).employees.filter(emp => emp.employmentType === "fullTime");
   const checkins = calculateMonthlyCheckins(period.start, period.end, ss);
   const leaves = calculateMonthlyLeaveSummary(period.start, period.end, ss);
   const ot = calculateMonthlyOtSummary(period.start, period.end, ss);
@@ -832,7 +862,7 @@ function syncMonthlySalary(targetDate, ss) {
     const diligence = Number(manual.diligence) || 0;
     const incentive = Number(manual.incentive) || 0;
     const normalPay = Math.max(Math.round((dailyRate * workDays) - (unpaidLeave * 400)), 0);
-    const holidayExtra = holidayWorked * 200;
+    const holidayExtra = holidayWorked * 400;
     const net = normalPay + holidayExtra + otTotal + diligence + incentive;
 
     totals.salary += salary;
@@ -879,13 +909,90 @@ function syncMonthlySalary(targetDate, ss) {
   ]);
 
   sheet.getRange(table.headerRow, 2).setValue(period.label + " เงินเดือนฐาน");
+  sheet.getRange(table.headerRow, 8).setValue("ค่าแรงพิเศษ (400 บาท/วัน)");
   ensureSalaryRows(sheet, table, rows.length);
   sheet.getRange(table.headerRow + 1, 1, rows.length, 12).setValues(rows);
-  return { status: "ok", month: period.label, rows: rows.length };
+  const partTimeResult = syncMonthlyPartTimeSalary(date, ss);
+  return {
+    status: "ok",
+    month: period.label,
+    rows: rows.length,
+    partTimeRows: partTimeResult.rows
+  };
 }
 
 function runMonthlySalaryNow() {
   return syncMonthlySalary();
+}
+
+function syncMonthlyPartTimeSalary(targetDate, ss) {
+  const date = targetDate instanceof Date && !isNaN(targetDate.getTime())
+    ? targetDate
+    : new Date();
+  const period = getMonthPeriod(date);
+  const employees = getEmployeesData(ss).employees.filter(emp => emp.employmentType === "partTime");
+  const workedHours = calculateMonthlyWorkedHours(period.start, period.end, ss);
+  const ot = calculateMonthlyOtSummary(period.start, period.end, ss);
+  const sheet = ensurePartTimeSalarySheet_(ss);
+  const table = getFlexibleTable(sheet, "ชื่อ");
+  const rows = [];
+  const totals = {
+    clockedHours: 0,
+    normalHours: 0,
+    normalPay: 0,
+    otHours: 0,
+    otPay: 0,
+    net: 0
+  };
+
+  employees.forEach(emp => {
+    const clockedHours = Number(workedHours[emp.name]) || 0;
+    const otHours = Number((ot[emp.name] && ot[emp.name].hours) || 0);
+    // Check-in/out covers the whole shift. Remove approved OT hours so those
+    // hours are paid once at the OT rate instead of at both rates.
+    const normalHours = roundNumber_(Math.max(clockedHours - otHours, 0), 2);
+    const normalPay = roundNumber_(normalHours * emp.hourlyRate, 2);
+    const otPay = roundNumber_(Number((ot[emp.name] && ot[emp.name].total) || 0), 2);
+    const net = roundNumber_(normalPay + otPay, 2);
+
+    totals.clockedHours += clockedHours;
+    totals.normalHours += normalHours;
+    totals.normalPay += normalPay;
+    totals.otHours += otHours;
+    totals.otPay += otPay;
+    totals.net += net;
+
+    rows.push([
+      emp.name,
+      emp.hourlyRate,
+      roundNumber_(clockedHours, 2),
+      normalHours,
+      normalPay,
+      roundNumber_(otHours, 2),
+      emp.otRate,
+      otPay,
+      net
+    ]);
+  });
+
+  rows.push([
+    "รวมทั้งหมด",
+    "",
+    roundNumber_(totals.clockedHours, 2),
+    roundNumber_(totals.normalHours, 2),
+    roundNumber_(totals.normalPay, 2),
+    roundNumber_(totals.otHours, 2),
+    "",
+    roundNumber_(totals.otPay, 2),
+    roundNumber_(totals.net, 2)
+  ]);
+
+  sheet.getRange(table.headerRow - 1, 1).setValue("เดือน:");
+  sheet.getRange(table.headerRow - 1, 2).setValue(period.label);
+  ensurePartTimeSalaryRows_(sheet, table, rows.length);
+  sheet.getRange(table.headerRow + 1, 1, rows.length, 9).setValues(rows);
+  applyPartTimeSalaryDataFormat_(sheet, table, rows.length, ss);
+  return { status: "ok", month: period.label, rows: rows.length };
 }
 
 function calculateMonthlyCheckins(start, end, ss) {
@@ -911,6 +1018,44 @@ function calculateMonthlyCheckins(start, end, ss) {
     };
   });
   return summary;
+}
+
+function calculateMonthlyWorkedHours(start, end, ss) {
+  const sheet = getSheet(SHEETS.checkins, ss);
+  const table = getFlexibleTable(sheet, "วันที่");
+  const events = {};
+
+  table.rows.forEach(row => {
+    const dateKey = normalizeDateKey(row[0]);
+    const name = clean(row[1]);
+    const type = clean(row[2]);
+    const minute = toMinuteOfDay_(row[3]);
+    if (!dateKey || dateKey < start || dateKey > end || !name || minute === null) return;
+    if (type !== "เช็คอิน" && type !== "เช็คเอาท์") return;
+    const key = name + "\n" + dateKey;
+    if (!events[key]) events[key] = [];
+    events[key].push({ name, type, minute });
+  });
+
+  const hours = {};
+  Object.keys(events).forEach(key => {
+    const dayEvents = events[key].sort((a, b) => a.minute - b.minute);
+    let checkinMinute = null;
+    dayEvents.forEach(event => {
+      if (event.type === "เช็คอิน") {
+        if (checkinMinute === null) checkinMinute = event.minute;
+        return;
+      }
+      if (checkinMinute === null || event.minute <= checkinMinute) return;
+      hours[event.name] = (Number(hours[event.name]) || 0) + ((event.minute - checkinMinute) / 60);
+      checkinMinute = null;
+    });
+  });
+
+  Object.keys(hours).forEach(name => {
+    hours[name] = roundNumber_(hours[name], 2);
+  });
+  return hours;
 }
 
 function calculateMonthlyLeaveSummary(start, end, ss) {
@@ -940,7 +1085,8 @@ function calculateMonthlyOtSummary(start, end, ss) {
     const dateKey = normalizeDateKey(row[0]);
     const status = clean(row[8]);
     if (!name || status !== "อนุมัติ" || !dateKey || dateKey < start || dateKey > end) return;
-    if (!summary[name]) summary[name] = { total: 0 };
+    if (!summary[name]) summary[name] = { hours: 0, total: 0 };
+    summary[name].hours += Number(row[4]) || 0;
     summary[name].total += Number(row[6]) || 0;
   });
   return summary;
@@ -970,6 +1116,237 @@ function ensureSalaryRows(sheet, table, neededRows) {
   if (existingRows > neededRows) {
     sheet.getRange(table.headerRow + 1 + neededRows, 1, existingRows - neededRows, 12).clearContent();
   }
+}
+
+/**
+ * Run once after deploying this version. It creates the part-time employee tab
+ * immediately after "พนักงาน", creates its separate salary summary, and adds
+ * the current part-time staff without duplicating existing rows.
+ */
+function setupPartTimeTables() {
+  const ss = getSs();
+  const employeeSheet = ensurePartTimeEmployeeSheet_(ss);
+  const salarySheet = ensurePartTimeSalarySheet_(ss);
+  const salaryResult = syncMonthlyPartTimeSalary(new Date(), ss);
+  return {
+    status: "ok",
+    employeeSheet: employeeSheet.getName(),
+    salarySheet: salarySheet.getName(),
+    employees: PART_TIME_DEFAULTS.map(emp => emp.name),
+    salaryRows: salaryResult.rows
+  };
+}
+
+function ensurePartTimeEmployeeSheet_(ss) {
+  const spreadsheet = ss || getSs();
+  const regularSheet = getSheet(SHEETS.employees, spreadsheet);
+  let sheet = getOptionalSheet_(SHEETS.partTimeEmployees, spreadsheet);
+
+  if (!sheet) {
+    sheet = regularSheet.copyTo(spreadsheet).setName(SHEETS.partTimeEmployees);
+    moveSheetAfter_(spreadsheet, sheet, regularSheet);
+    const copiedTable = getFlexibleTable(sheet, "รหัส");
+    if (copiedTable.rows.length) {
+      sheet.getRange(copiedTable.headerRow + 1, 1, copiedTable.rows.length, sheet.getLastColumn()).clearContent();
+    }
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headerIndex = findRow(values, "รหัส", 0);
+  if (headerIndex < 0) throw new Error("Header not found: รหัส in " + sheet.getName());
+  const headers = getHeaderMap(values[headerIndex]);
+  const payColumn = Number(headers["เงินเดือน"]) >= 0
+    ? Number(headers["เงินเดือน"]) + 1
+    : Number(headers["ค่าจ้าง (บาท/ชั่วโมง)"]) >= 0
+      ? Number(headers["ค่าจ้าง (บาท/ชั่วโมง)"]) + 1
+      : 6;
+  sheet.getRange(headerIndex + 1, payColumn).setValue("ค่าจ้าง (บาท/ชั่วโมง)");
+  sheet.getRange(headerIndex + 2, 3, sheet.getMaxRows() - headerIndex - 1, 1)
+    .clearDataValidations();
+
+  PART_TIME_DEFAULTS.forEach(emp => {
+    const existingRow = findEmployeeRowByName_(sheet, headerIndex + 1, emp.name);
+    if (existingRow) {
+      if (!clean(sheet.getRange(existingRow, 1).getValue())) sheet.getRange(existingRow, 1).setValue(emp.id);
+      if (clean(sheet.getRange(existingRow, 3).getValue()) === "พนักงานพาร์ทไทม์") {
+        sheet.getRange(existingRow, 3).clearContent();
+      }
+      if (!Number(sheet.getRange(existingRow, payColumn).getValue())) sheet.getRange(existingRow, payColumn).setValue(emp.hourlyRate);
+      if (!Number(sheet.getRange(existingRow, 7).getValue())) sheet.getRange(existingRow, 7).setValue(emp.otRate);
+      return;
+    }
+    writeDataRow(sheet, "รหัส", [
+      emp.id,
+      emp.name,
+      "",
+      "",
+      "",
+      emp.hourlyRate,
+      emp.otRate,
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]);
+  });
+
+  const lastRow = Math.max(sheet.getLastRow(), headerIndex + 1);
+  if (lastRow > headerIndex + 1) {
+    sheet.getRange(headerIndex + 2, payColumn, lastRow - headerIndex - 1, 2).setNumberFormat("#,##0.##");
+  }
+  return sheet;
+}
+
+function ensurePartTimeSalarySheet_(ss) {
+  const spreadsheet = ss || getSs();
+  let sheet = getOptionalSheet_(SHEETS.partTimeSalary, spreadsheet);
+  const regularSalarySheet = getOptionalSheet_(SHEETS.salary, spreadsheet);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEETS.partTimeSalary);
+  }
+  if (regularSalarySheet) moveSheetAfter_(spreadsheet, sheet, regularSalarySheet);
+
+  let headerRow = 4;
+  if (regularSalarySheet) {
+    headerRow = getFlexibleTable(regularSalarySheet, "ชื่อ").headerRow;
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const existingHeader = findRow(values, "ชื่อ", 0);
+  if (existingHeader >= 0 && existingHeader + 1 !== headerRow) {
+    sheet.getRange(existingHeader + 1, 1, Math.max(sheet.getLastRow() - existingHeader, 1), 9).clearContent();
+  }
+
+  if (sheet.getMaxColumns() < 9) sheet.insertColumnsAfter(sheet.getMaxColumns(), 9 - sheet.getMaxColumns());
+  if (sheet.getMaxRows() < headerRow + 1) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), headerRow + 1 - sheet.getMaxRows());
+  }
+
+  const topRange = sheet.getRange(1, 1, headerRow, 9);
+  topRange.breakApart().clearContent();
+  if (regularSalarySheet) {
+    regularSalarySheet.getRange(1, 1, headerRow, 9)
+      .copyFormatToRange(sheet, 1, 9, 1, headerRow);
+    regularSalarySheet.getRange(1, 1)
+      .copyFormatToRange(sheet, 1, 9, 1, 1);
+    for (let row = 1; row <= headerRow; row++) {
+      sheet.setRowHeight(row, regularSalarySheet.getRowHeight(row));
+    }
+    for (let col = 1; col <= 8; col++) {
+      sheet.setColumnWidth(col, regularSalarySheet.getColumnWidth(col));
+    }
+    sheet.setColumnWidth(9, regularSalarySheet.getColumnWidth(Math.min(12, regularSalarySheet.getMaxColumns())));
+  } else {
+    sheet.getRange(1, 1, 1, 9)
+      .setBackground("#174E3B")
+      .setFontColor("#FFFFFF")
+      .setFontWeight("bold")
+      .setHorizontalAlignment("center");
+    sheet.getRange(headerRow, 1, 1, 9)
+      .setBackground("#2D6A4F")
+      .setFontColor("#FFFFFF")
+      .setFontWeight("bold")
+      .setHorizontalAlignment("center");
+  }
+
+  sheet.getRange(1, 1, 1, 9).merge()
+    .setValue("💰 สรุปเงินเดือนพาร์ทไทม์ประจำเดือน")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle");
+  sheet.getRange(headerRow - 1, 1).setValue("เดือน:").setFontWeight("bold");
+  sheet.getRange(headerRow - 1, 2).setValue(getMonthPeriod(new Date()).label);
+  const headers = [
+    "ชื่อ",
+    "อัตราค่าจ้าง/ชม.",
+    "ชั่วโมงลงเวลารวม",
+    "ชั่วโมงปกติ",
+    "ค่าแรงปกติ",
+    "ชั่วโมงโอที",
+    "อัตราโอที/ชม.",
+    "ค่าโอที",
+    "รวมสุทธิ"
+  ];
+  sheet.getRange(headerRow, 1, 1, headers.length)
+    .setValues([headers])
+    .setFontWeight("bold");
+  sheet.setFrozenRows(headerRow);
+  return sheet;
+}
+
+function applyPartTimeSalaryDataFormat_(sheet, table, rowCount, ss) {
+  if (!rowCount) return;
+  const spreadsheet = ss || getSs();
+  const regularSalarySheet = getOptionalSheet_(SHEETS.salary, spreadsheet);
+  const firstDataRow = table.headerRow + 1;
+  const normalRowCount = Math.max(rowCount - 1, 0);
+  const totalRow = firstDataRow + rowCount - 1;
+
+  if (regularSalarySheet) {
+    const regularTable = getFlexibleTable(regularSalarySheet, "ชื่อ");
+    const regularFirstDataRow = regularTable.headerRow + 1;
+    if (normalRowCount) {
+      regularSalarySheet.getRange(regularFirstDataRow, 1, 1, 8)
+        .copyFormatToRange(sheet, 1, 8, firstDataRow, firstDataRow + normalRowCount - 1);
+      regularSalarySheet.getRange(regularFirstDataRow, 12)
+        .copyFormatToRange(sheet, 9, 9, firstDataRow, firstDataRow + normalRowCount - 1);
+      sheet.setRowHeights(firstDataRow, normalRowCount, regularSalarySheet.getRowHeight(regularFirstDataRow));
+    }
+
+    let regularTotalRow = regularTable.headerRow + regularTable.rows.length;
+    regularTable.rows.forEach((row, index) => {
+      if (clean(row[0]) === "รวมทั้งหมด") regularTotalRow = regularTable.headerRow + 1 + index;
+    });
+    regularSalarySheet.getRange(regularTotalRow, 1, 1, 8)
+      .copyFormatToRange(sheet, 1, 8, totalRow, totalRow);
+    regularSalarySheet.getRange(regularTotalRow, 12)
+      .copyFormatToRange(sheet, 9, 9, totalRow, totalRow);
+    sheet.setRowHeight(totalRow, regularSalarySheet.getRowHeight(regularTotalRow));
+  } else {
+    sheet.getRange(totalRow, 1, 1, 9)
+      .setBackground("#174E3B")
+      .setFontColor("#FFFFFF")
+      .setFontWeight("bold");
+  }
+
+  sheet.getRange(firstDataRow, 2, rowCount, 8).setNumberFormat("#,##0.##");
+}
+
+function ensurePartTimeSalaryRows_(sheet, table, neededRows) {
+  const requiredLastRow = table.headerRow + neededRows;
+  if (sheet.getMaxRows() < requiredLastRow) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), requiredLastRow - sheet.getMaxRows());
+  }
+  if (table.rows.length > neededRows) {
+    sheet.getRange(table.headerRow + 1 + neededRows, 1, table.rows.length - neededRows, 9).clearContent();
+  }
+}
+
+function findEmployeeRowByName_(sheet, headerRow, name) {
+  const values = sheet.getDataRange().getValues();
+  for (let index = headerRow; index < values.length; index++) {
+    const first = clean(values[index][0]);
+    if (first.indexOf("💡") === 0 || first.indexOf("📋") === 0) break;
+    if (clean(values[index][1]) === clean(name)) return index + 1;
+  }
+  return 0;
+}
+
+function moveSheetAfter_(ss, sheet, afterSheet) {
+  if (!sheet || !afterSheet || sheet.getSheetId() === afterSheet.getSheetId()) return;
+  const sheetCount = ss.getSheets().length;
+  const currentIndex = sheet.getIndex();
+  const afterIndex = afterSheet.getIndex();
+  // If the moving sheet is before the target, removing it shifts the target
+  // one place to the left. Clamp the result because moveActiveSheet rejects a
+  // position outside the current sheet count.
+  const requestedIndex = currentIndex < afterIndex ? afterIndex : afterIndex + 1;
+  const targetIndex = Math.max(1, Math.min(requestedIndex, sheetCount));
+  if (currentIndex === targetIndex) return;
+  const activeSheet = ss.getActiveSheet();
+  ss.setActiveSheet(sheet);
+  ss.moveActiveSheet(targetIndex);
+  if (activeSheet && activeSheet.getSheetId() !== sheet.getSheetId()) ss.setActiveSheet(activeSheet);
 }
 
 function getMonthPeriod(date) {
@@ -1087,6 +1464,10 @@ function getSheet(name, ss) {
   const sheet = (ss || getSs()).getSheetByName(name);
   if (!sheet) throw new Error("Sheet not found: " + name);
   return sheet;
+}
+
+function getOptionalSheet_(name, ss) {
+  return (ss || getSs()).getSheetByName(name);
 }
 
 function getTable(sheet, firstHeaderText) {
@@ -1359,6 +1740,24 @@ function calculateHours(start, end) {
   return Math.round(((e[0] * 60 + e[1]) - (s[0] * 60 + s[1])) / 60 * 10) / 10;
 }
 
+function toMinuteOfDay_(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) {
+    const parts = Utilities.formatDate(value, TIMEZONE, "HH:mm").split(":").map(Number);
+    return parts[0] * 60 + parts[1];
+  }
+  const match = clean(value).match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function roundNumber_(value, digits) {
+  const factor = Math.pow(10, Number(digits) || 0);
+  return Math.round((Number(value) || 0) * factor) / factor;
+}
+
 function parseShiftTimes(values) {
   const shiftTimes = {};
   values.forEach(row => {
@@ -1378,7 +1777,7 @@ function parseShiftTimes(values) {
 
 function autoFillSchedule() {
   const sheet = getSheet(SHEETS.schedule);
-  const employees = getEmployeesData().employees;
+  const employees = getEmployeesData().employees.filter(emp => emp.employmentType === "fullTime");
   const schedule = getScheduleData();
   const positions = schedule.positions;
   const shiftOptions = Object.keys(schedule.shiftTimes);
@@ -1436,6 +1835,7 @@ function setAllTriggers() {
     .forSpreadsheet(getSs())
     .onEdit()
     .create();
+  setupPartTimeTables();
   setupCheckinTable();
   setupLeaveAndOtTables();
 }

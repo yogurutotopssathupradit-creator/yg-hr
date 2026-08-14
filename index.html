@@ -340,6 +340,7 @@ const SCHEDULE_DAYS = ['อาทิตย์','จันทร์','อัง�
 
 let selectedEmp = null, gpsOk = false, userLat = null, userLng = null;
 let employees = [];
+let regularEmployees = [];
 let employeeDetails = {};
 let employeeColors = {};
 let scheduleData = null;
@@ -387,11 +388,13 @@ async function loadEmployees() {
     const data = await apiGet('getEmployees');
     if (data.status && data.status !== 'ok') throw new Error(data.message || 'โหลดรายชื่อไม่ได้');
     employees = data.names || [];
+    regularEmployees = data.regularNames || data.names || [];
     employeeDetails = {};
     (data.employees || []).forEach(emp => { employeeDetails[emp.name] = emp; });
     employeeColors = buildEmployeeColors(employees);
   } catch(e) {
     employees = [];
+    regularEmployees = [];
     employeeColors = {};
     toast('เชื่อมต่อรายชื่อจาก Sheet ไม่ได้','err');
   }
@@ -437,9 +440,10 @@ function renderNames() {
 }
 
 function populateSelects() {
-  const opts = employees.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
-  document.getElementById('leaveName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
-  document.getElementById('otName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + opts;
+  const leaveOpts = regularEmployees.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+  const otOpts = employees.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+  document.getElementById('leaveName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + leaveOpts;
+  document.getElementById('otName').innerHTML = '<option value="">-- เลือกชื่อ --</option>' + otOpts;
 }
 
 function buildEmployeeColors(names) {
@@ -452,7 +456,7 @@ function buildEmployeeColors(names) {
 function renderEmployeeLegend() {
   const legend = document.getElementById('employeeLegend');
   if (!legend) return;
-  legend.innerHTML = employees.map(name => `
+  legend.innerHTML = regularEmployees.map(name => `
     <div class="legend-item"><div class="legend-dot" style="background:${employeeColors[name] || '#1565C0'}"></div>${escapeHtml(name)}</div>
   `).join('');
 }
@@ -679,7 +683,7 @@ function calcHours(s,e) {
 // SCHEDULE
 function renderSchedule() {
   const list=document.getElementById('scheduleList');
-  if (!employees.length) { list.innerHTML='<div class="empty">ไม่พบข้อมูล</div>'; return; }
+  if (!regularEmployees.length) { list.innerHTML='<div class="empty">ไม่พบข้อมูล</div>'; return; }
   const today=getScheduleDayName();
   const sheetPositions = (scheduleData && scheduleData.positions) || [];
   const shiftTimes = (scheduleData && scheduleData.shiftTimes) || {};
@@ -714,7 +718,7 @@ function renderSchedule() {
     return;
   }
 
-  list.innerHTML = employees.map((name,idx) => {
+  list.innerHTML = regularEmployees.map((name,idx) => {
     const dayOff = (employeeDetails[name] && employeeDetails[name].dayOff) || '';
     const isOff = today.includes(dayOff);
     if (isOff) return `
@@ -965,7 +969,7 @@ function showDayPopup(dateStr, d) {
   // สถานะพนักงานวันนี้
   html += `<div class="popup-section">
     <div class="popup-section-title">👥 สถานะพนักงาน</div>`;
-  employees.forEach(name => {
+  regularEmployees.forEach(name => {
     const isLeave = leaves.includes(name);
     const scheduleStatus = getScheduleStatusForEmployee(name, dayName);
     const dayOff = employeeDetails[name] && employeeDetails[name].dayOff;
