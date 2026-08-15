@@ -361,7 +361,7 @@ async function init() {
 }
 
 function clearOldLog() {
-  const today = new Date().toLocaleDateString('th-TH');
+  const today = getBangkokNow().date;
   if (localStorage.getItem('yg_logdate_v3') !== today) {
     todayLog = [];
     localStorage.setItem('yg_log_v3', '[]');
@@ -370,7 +370,7 @@ function clearOldLog() {
 }
 
 function setDefaultDates() {
-  const today = dateKey(new Date());
+  const today = getBangkokNow().date;
   document.getElementById('leaveDate').value = today;
   document.getElementById('otDate').value = today;
 }
@@ -378,7 +378,7 @@ function setDefaultDates() {
 function startClock() {
   const tick = () => {
     document.getElementById('clock').textContent =
-      new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+      new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok'});
   };
   tick(); setInterval(tick, 1000);
 }
@@ -528,19 +528,36 @@ function updateBtns() {
 async function doCheckin(type) {
   if (!selectedEmp) return toast('เลือกชื่อก่อนนะครับ','err');
   if (!gpsOk && !ALLOW_CHECKIN_OUTSIDE_LOCATION) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
-  const now = new Date();
-  const time = now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-  const date = dateKey(now);
+  const {date, time} = getBangkokNow();
   const entry = {name:selectedEmp,type,time,date};
   try {
     await sendToSheet({action:'checkin',...entry});
-    todayLog.push(entry);
+    const savedEntry = await verifyCheckinSaved(selectedEmp, type);
+    todayLog.push(savedEntry);
     localStorage.setItem('yg_log_v3',JSON.stringify(todayLog));
     updateStatus(); updateBtns(); renderLog();
-    toast(`${type}สำเร็จ — ${time}`,'ok');
+    toast(`${type}สำเร็จ — ${savedEntry.time}`,'ok');
   } catch(e) {
-    toast('บันทึกลง Sheet ไม่สำเร็จ','err');
+    toast('ไม่พบบันทึกใน Sheet — กรุณาลองใหม่','err');
   }
+}
+
+async function verifyCheckinSaved(name, type) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise(resolve => setTimeout(resolve, 700));
+    try {
+      const data = await apiGet('getLatestCheckin', {name});
+      const entry = data.entry;
+      if (entry && entry.type === type && entry.ageMinutes >= 0 && entry.ageMinutes <= 2) {
+        return {name:entry.name, type:entry.type, time:entry.time, date:entry.date};
+      }
+      lastError = new Error('Saved check-in was not found');
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('Saved check-in was not found');
 }
 
 async function submitLeave() {
@@ -919,6 +936,20 @@ function dateKey(date) {
   const m = String(date.getMonth()+1).padStart(2,'0');
   const d = String(date.getDate()).padStart(2,'0');
   return `${y}-${m}-${d}`;
+}
+
+function getBangkokNow(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone:'Asia/Bangkok', year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+  }).formatToParts(date).reduce((result, part) => {
+    if (part.type !== 'literal') result[part.type] = part.value;
+    return result;
+  }, {});
+  return {
+    date:`${parts.year}-${parts.month}-${parts.day}`,
+    time:`${parts.hour}:${parts.minute}`
+  };
 }
 
 function escapeHtml(value) {

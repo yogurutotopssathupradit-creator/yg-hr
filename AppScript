@@ -64,6 +64,7 @@ function doGet(e) {
     if (action === "getSchedule") return output(params, getScheduleData());
     if (action === "getHolidays") return output(params, getHolidaysData());
     if (action === "getQuota") return output(params, getQuotaData(params.name, params.userId));
+    if (action === "getLatestCheckin") return output(params, getLatestCheckinData(params.name));
     if (action === "syncLeaveQuota") return output(params, syncLeaveQuota());
     if (action === "syncMonthlySalary") return output(params, syncMonthlySalary());
 
@@ -344,28 +345,77 @@ function getQuotaData(name, userId) {
 }
 
 function doCheckin(data) {
-  requireFields(data, ["name", "type", "date", "time"]);
+  requireFields(data, ["name", "type"]);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const ss = getSs();
+    if (ss.getSpreadsheetTimeZone() !== TIMEZONE) ss.setSpreadsheetTimeZone(TIMEZONE);
+
+    // The server clock is authoritative. Device clocks can be wrong or changed,
+    // which previously allowed the stored date/time to disagree with the weekday.
+    const now = new Date();
+    const dateKey = Utilities.formatDate(now, TIMEZONE, "yyyy-MM-dd");
+    const time = Utilities.formatDate(now, TIMEZONE, "HH:mm");
+    const dateObj = bangkokDateValue_(dateKey);
+    const day = thaiDayNameFromDateKey_(dateKey);
+    const isHoliday = checkHoliday(dateKey);
+    const sheet = getSheet(SHEETS.checkins, ss);
+
+    const checkinValues = [
+      dateObj,
+      clean(data.name),
+      clean(data.type),
+      time,
+      day,
+      isHoliday ? "วันหยุดนักขัตฤกษ์" : "วันธรรมดา",
+      clean(data.note)
+    ];
+
+    // Insert only the new row. The former full-table sort rewrote every existing
+    // row after each check-in and could shift/corrupt legacy date values.
+    const checkinRow = writeDataRowAtTop(sheet, "วันที่", checkinValues);
+    sheet.getRange(checkinRow, 1).setNumberFormat("dd/MM/yyyy");
+
+    return { status: "ok", date: dateKey, time, day, timezone: TIMEZONE };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getLatestCheckinData(name) {
+  const targetName = clean(name);
+  if (!targetName) return { status: "error", message: "Missing employee name" };
+
   const sheet = getSheet(SHEETS.checkins);
-  const dateKey = normalizeDateKey(data.date);
-  const dateObj = parseDate(dateKey || data.date) || new Date();
-  const day = thaiDayName(dateObj);
-  const isHoliday = checkHoliday(dateKey);
+  const table = getFlexibleDisplayTable(sheet, "วันที่");
+  let latest = null;
 
-  const checkinRow = writeDataRow(sheet, "วันที่", [
-    dateObj,
-    clean(data.name),
-    clean(data.type),
-    clean(data.time),
-    day,
-    isHoliday ? "วันหยุดนักขัตฤกษ์" : "วันธรรมดา",
-    clean(data.note)
-  ]);
-  sheet.getRange(checkinRow, 1).setNumberFormat("dd/MM/yyyy");
+  table.rows.forEach(row => {
+    if (clean(row[1]) !== targetName) return;
+    const date = normalizeDateKey(row[0]);
+    const time = toDisplayTime(row[3]);
+    const timestampMinute = bangkokTimestampMinute_(date, time);
+    if (!date || timestampMinute === null) return;
+    if (!latest || timestampMinute > latest.timestampMinute) {
+      latest = {
+        date,
+        name: targetName,
+        type: clean(row[2]),
+        time,
+        day: clean(row[4]),
+        timestampMinute
+      };
+    }
+  });
 
-  sortCheckinRowsNewestFirst_(sheet, getFlexibleTable(sheet, "วันที่"));
-  refreshCheckinFilter_(sheet);
-
-  return { status: "ok" };
+  if (!latest) return { status: "ok", entry: null, timezone: TIMEZONE };
+  const now = new Date();
+  const nowDate = Utilities.formatDate(now, TIMEZONE, "yyyy-MM-dd");
+  const nowTime = Utilities.formatDate(now, TIMEZONE, "HH:mm");
+  latest.ageMinutes = bangkokTimestampMinute_(nowDate, nowTime) - latest.timestampMinute;
+  delete latest.timestampMinute;
+  return { status: "ok", entry: latest, timezone: TIMEZONE };
 }
 
 function doLeave(data) {
@@ -387,8 +437,6 @@ function doLeave(data) {
     "รออนุมัติ"
   ]);
   applyValidationFromNearbyRow(sheet, row, 8);
-  sortMonthlyRequestRowsNewestFirst_(sheet, getFlexibleTable(sheet, LEAVE_FILTER.firstHeader), LEAVE_FILTER);
-  refreshMonthlyRequestFilter_(sheet, LEAVE_FILTER);
 
   return { status: "ok" };
 }
@@ -469,10 +517,12 @@ function applyCheckinMonthFilterFromEdit_(e) {
 
 /**
  * Run once after deploying, or run setAllTriggers(), to restore the standard
- * check-in table, show all records, enable its native filter and sort newest first.
+ * check-in table, show all records and enable its native filter. New records are
+ * inserted at the top, so normal check-ins never need to rewrite old rows.
  */
 function setupCheckinTable() {
   const ss = getSs();
+  if (ss.getSpreadsheetTimeZone() !== TIMEZONE) ss.setSpreadsheetTimeZone(TIMEZONE);
   const sheet = getSheet(SHEETS.checkins, ss);
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) sheet.showRows(2, lastRow - 1);
@@ -487,7 +537,6 @@ function setupCheckinTable() {
   }
 
   table = getFlexibleTable(sheet, "วันที่");
-  sortCheckinRowsNewestFirst_(sheet, table);
   setupCheckinMonthSelector_(sheet);
   refreshCheckinFilter_(sheet);
   return { status: "ok", rows: table.rows.length };
@@ -573,38 +622,6 @@ function parseThaiMonthLabel_(label) {
   };
 }
 
-function sortCheckinRowsNewestFirst_(sheet, table) {
-  const firstDataRow = table.headerRow + 1;
-  const lastRow = sheet.getLastRow();
-  if (lastRow < firstDataRow) return;
-
-  const columnCount = 7;
-  const range = sheet.getRange(firstDataRow, 1, lastRow - firstDataRow + 1, columnCount);
-  const values = range.getValues();
-  const displayValues = range.getDisplayValues();
-  const dataRows = [];
-
-  // Check-in records are contiguous. Stop before blank space or instruction rows
-  // so those rows keep their original position below the table.
-  for (let i = 0; i < values.length; i++) {
-    if (!normalizeDateKey(displayValues[i][0])) break;
-    const normalizedValues = values[i].slice();
-    // Migrate legacy text/locale-dependent dates to an unambiguous Date value.
-    normalizedValues[0] = parseDate(displayValues[i][0]) || values[i][0];
-    dataRows.push({ values: normalizedValues, date: displayValues[i][0], time: displayValues[i][3] });
-  }
-  if (!dataRows.length) return;
-
-  dataRows.sort((a, b) => {
-    const dateCompare = normalizeDateKey(b.date).localeCompare(normalizeDateKey(a.date));
-    if (dateCompare) return dateCompare;
-    return timeSortValue_(b.time) - timeSortValue_(a.time);
-  });
-
-  sheet.getRange(firstDataRow, 1, dataRows.length, columnCount).setValues(dataRows.map(row => row.values));
-  sheet.getRange(firstDataRow, 1, dataRows.length, 1).setNumberFormat("dd/MM/yyyy");
-}
-
 function timeSortValue_(value) {
   const text = toDisplayTime(value);
   const match = text.match(/^(\d{1,2}):(\d{2})/);
@@ -628,7 +645,6 @@ function setupLeaveAndOtTables() {
 
 function setupMonthlyRequestTable_(sheet, config) {
   const table = getFlexibleTable(sheet, config.firstHeader);
-  sortMonthlyRequestRowsNewestFirst_(sheet, table, config);
   setupMonthlyRequestSelector_(sheet, config);
   refreshMonthlyRequestFilter_(sheet, config);
   return { status: "ok", rows: table.rows.length };
@@ -711,40 +727,6 @@ function getMonthlyRequestOptions_(sheet, config) {
   const now = new Date();
   months[Utilities.formatDate(now, TIMEZONE, "yyyy-MM")] = getMonthPeriod(now).label;
   return Object.keys(months).sort().reverse().map(key => months[key]);
-}
-
-function sortMonthlyRequestRowsNewestFirst_(sheet, table, config) {
-  if (!table.rows.length) return;
-  const firstDataRow = table.headerRow + 1;
-  const range = sheet.getRange(firstDataRow, 1, table.rows.length, config.columnCount);
-  const values = range.getValues();
-  const displayed = range.getDisplayValues();
-  const dateIndex = config.dateColumn - 1;
-  const rows = values.map((row, index) => {
-    const normalized = row.slice();
-    normalized[dateIndex] = parseDate(displayed[index][dateIndex]) || row[dateIndex];
-    if (config === LEAVE_FILTER) normalized[4] = parseDate(displayed[index][4]) || row[4];
-    return {
-      values: normalized,
-      date: normalizeDateKey(displayed[index][dateIndex]),
-      submitted: config === LEAVE_FILTER
-        ? parseDateTimeValue(displayed[index][0])
-        : parseDateTimeValue(displayed[index][9]),
-      time: config === OT_FILTER ? timeSortValue_(displayed[index][2]) : 0
-    };
-  });
-
-  rows.sort((a, b) => {
-    const dateCompare = b.date.localeCompare(a.date);
-    if (dateCompare) return dateCompare;
-    const submittedCompare = b.submitted - a.submitted;
-    if (submittedCompare) return submittedCompare;
-    return b.time - a.time;
-  });
-
-  range.setValues(rows.map(row => row.values));
-  sheet.getRange(firstDataRow, config.dateColumn, rows.length, 1).setNumberFormat("dd/MM/yyyy");
-  if (config === LEAVE_FILTER) sheet.getRange(firstDataRow, 5, rows.length, 1).setNumberFormat("dd/MM/yyyy");
 }
 
 function ensureMonthlyRequestFilter_(sheet, table, config) {
@@ -1401,8 +1383,6 @@ function doOT(data) {
     submittedAt
   ]);
   applyValidationFromNearbyRow(sheet, row, 9);
-  sortMonthlyRequestRowsNewestFirst_(sheet, getFlexibleTable(sheet, OT_FILTER.firstHeader), OT_FILTER);
-  refreshMonthlyRequestFilter_(sheet, OT_FILTER);
 
   return { status: "ok" };
 }
@@ -1731,6 +1711,32 @@ function parseDateTimeValue(value) {
 function thaiDayName(date) {
   const names = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
   return names[date.getDay()];
+}
+
+function thaiDayNameFromDateKey_(dateKey) {
+  const match = clean(dateKey).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const names = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
+  const utcDate = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return names[utcDate.getUTCDay()];
+}
+
+function bangkokDateValue_(dateKey) {
+  const match = clean(dateKey).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) throw new Error("Invalid Bangkok date: " + clean(dateKey));
+  // Bangkok noon avoids a date shift even if the Apps Script project timezone
+  // differs from the spreadsheet timezone.
+  return new Date(dateKey + "T12:00:00+07:00");
+}
+
+function bangkokTimestampMinute_(dateKey, time) {
+  const dateMatch = clean(dateKey).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch = clean(time).match(/^(\d{1,2}):(\d{2})$/);
+  if (!dateMatch || !timeMatch) return null;
+  return Math.floor(Date.UTC(
+    Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]),
+    Number(timeMatch[1]), Number(timeMatch[2])
+  ) / 60000);
 }
 
 function calculateHours(start, end) {
