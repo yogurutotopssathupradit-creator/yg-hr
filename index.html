@@ -64,6 +64,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .btn:active{transform:scale(0.96);}
 .btn:disabled{background:#A0AEC0;cursor:not-allowed;}
 .btn-icon{font-size:22px;}
+.btn.loading{cursor:progress;}
+.btn.loading.btn-in{background:var(--green);}
+.btn.loading.btn-out{background:var(--amber);}
+.btn.loading .btn-icon{width:18px;height:18px;border:3px solid rgba(255,255,255,.45);border-top-color:white;border-radius:50%;font-size:0;animation:btn-spin .75s linear infinite;}
+@keyframes btn-spin{to{transform:rotate(360deg);}}
 .btn-in{background:var(--green);color:white;}
 .btn-out{background:var(--amber);color:white;}
 
@@ -203,16 +208,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
     <div class="status-row">
       <div class="dot" id="statusDot"></div>
       <div>
-        <div class="status-text" id="statusText">เลือกชื่อก่อน</div>
+        <div class="status-text" id="statusText" aria-live="polite">เลือกชื่อก่อน</div>
         <div class="status-time" id="statusTime"></div>
       </div>
     </div>
     <div class="btn-row">
       <button class="btn btn-in" id="btnIn" disabled onclick="doCheckin('เช็คอิน')">
-        <span class="btn-icon">🟢</span>เช็คอิน
+        <span class="btn-icon">🟢</span><span class="btn-label">เช็คอิน</span>
       </button>
       <button class="btn btn-out" id="btnOut" disabled onclick="doCheckin('เช็คเอาท์')">
-        <span class="btn-icon">🔴</span>เช็คเอาท์
+        <span class="btn-icon">🔴</span><span class="btn-label">เช็คเอาท์</span>
       </button>
     </div>
     <div class="gps-bar" id="gpsBar">📍 กำลังตรวจสอบ GPS...</div>
@@ -339,6 +344,7 @@ let HOLIDAYS = {};
 const SCHEDULE_DAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
 
 let selectedEmp = null, gpsOk = false, userLat = null, userLng = null;
+let isCheckinSubmitting = false;
 let employees = [];
 let regularEmployees = [];
 let employeeDetails = {};
@@ -518,6 +524,7 @@ function updateStatus() {
 
 function updateBtns() {
   const btnIn=document.getElementById('btnIn'),btnOut=document.getElementById('btnOut');
+  if (isCheckinSubmitting) { btnIn.disabled=true; btnOut.disabled=true; return; }
   if (!selectedEmp||(!gpsOk && !ALLOW_CHECKIN_OUTSIDE_LOCATION)) { btnIn.disabled=true; btnOut.disabled=true; return; }
   const logs=todayLog.filter(l=>l.name===selectedEmp);
   const last=logs[logs.length-1];
@@ -526,10 +533,13 @@ function updateBtns() {
 }
 
 async function doCheckin(type) {
+  if (isCheckinSubmitting) return;
   if (!selectedEmp) return toast('เลือกชื่อก่อนนะครับ','err');
   if (!gpsOk && !ALLOW_CHECKIN_OUTSIDE_LOCATION) return toast('GPS ไม่ผ่าน — ต้องอยู่ในร้าน','err');
   const {date, time} = getBangkokNow();
   const entry = {name:selectedEmp,type,time,date};
+  isCheckinSubmitting = true;
+  setCheckinLoading(type, true);
   try {
     await sendToSheet({action:'checkin',...entry});
     const savedEntry = await verifyCheckinSaved(selectedEmp, type);
@@ -539,6 +549,38 @@ async function doCheckin(type) {
     toast(`${type}สำเร็จ — ${savedEntry.time}`,'ok');
   } catch(e) {
     toast('ไม่พบบันทึกใน Sheet — กรุณาลองใหม่','err');
+  } finally {
+    isCheckinSubmitting = false;
+    setCheckinLoading(type, false);
+    updateStatus();
+    updateBtns();
+  }
+}
+
+function setCheckinLoading(type, loading) {
+  const btnIn = document.getElementById('btnIn');
+  const btnOut = document.getElementById('btnOut');
+  const activeBtn = type === 'เช็คอิน' ? btnIn : btnOut;
+
+  [btnIn, btnOut].forEach(btn => {
+    btn.disabled = loading;
+    btn.classList.remove('loading');
+    btn.removeAttribute('aria-busy');
+  });
+
+  btnIn.querySelector('.btn-icon').textContent = '🟢';
+  btnIn.querySelector('.btn-label').textContent = 'เช็คอิน';
+  btnOut.querySelector('.btn-icon').textContent = '🔴';
+  btnOut.querySelector('.btn-label').textContent = 'เช็คเอาท์';
+
+  if (loading) {
+    activeBtn.classList.add('loading');
+    activeBtn.setAttribute('aria-busy', 'true');
+    activeBtn.querySelector('.btn-label').textContent = type === 'เช็คอิน'
+      ? 'กำลังเช็คอิน...'
+      : 'กำลังเช็คเอาท์...';
+    document.getElementById('statusText').textContent = `${type} — กำลังบันทึก`;
+    document.getElementById('statusTime').textContent = 'กำลังตรวจสอบรายการใน Sheet...';
   }
 }
 
